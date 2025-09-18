@@ -1,23 +1,21 @@
-import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from 'react-query';
-import { useForm } from 'react-hook-form';
-import { 
-  Plus, 
-  Search, 
-  Edit, 
-  Trash2, 
-  UserPlus, 
-  UserMinus,
-  Users
+import React, {useState} from 'react';
+import {useQuery, useMutation, useQueryClient} from 'react-query';
+import {useForm} from 'react-hook-form';
+import {
+	Plus,
+	Search,
+	Edit,
+	Trash2,
+	UserMinus,
+	Users
 } from 'lucide-react';
-import { api } from '../utils/api';
+import {api} from '../utils/api';
 import toast from 'react-hot-toast';
 
 const Teams = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingTeam, setEditingTeam] = useState(null);
-  const [selectedTeam, setSelectedTeam] = useState(null);
   const queryClient = useQueryClient();
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm();

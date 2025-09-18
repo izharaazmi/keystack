@@ -1,0 +1,18 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="24" cy="24" r="22" fill="#3B82F6" stroke="#1E40AF" stroke-width="3"/>
+  
+  <!-- Key icon -->
+  <g transform="translate(12, 12)">
+    <!-- Key head -->
+    <circle cx="12" cy="12" r="6" fill="white" stroke="#1E40AF" stroke-width="1.5"/>
+    <circle cx="12" cy="12" r="3" fill="#1E40AF"/>
+    
+    <!-- Key shaft -->
+    <rect x="18" y="10.5" width="9" height="3" fill="white" stroke="#1E40AF" stroke-width="0.5"/>
+    
+    <!-- Key teeth -->
+    <rect x="15" y="9" width="1.5" height="6" fill="white"/>
+    <rect x="16.5" y="7.5" width="1.5" height="9" fill="white"/>
+  </g>
+</svg>

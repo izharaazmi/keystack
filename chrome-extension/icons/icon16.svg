@@ -1,0 +1,17 @@
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="8" cy="8" r="7" fill="#3B82F6" stroke="#1E40AF" stroke-width="1"/>
+  
+  <!-- Key icon -->
+  <g transform="translate(4, 4)">
+    <!-- Key head -->
+    <circle cx="4" cy="4" r="2" fill="white"/>
+    
+    <!-- Key shaft -->
+    <rect x="6" y="3.5" width="3" height="1" fill="white"/>
+    
+    <!-- Key teeth -->
+    <rect x="5" y="3" width="0.5" height="2" fill="white"/>
+    <rect x="5.5" y="2.5" width="0.5" height="3" fill="white"/>
+  </g>
+</svg>

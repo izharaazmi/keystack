@@ -1,23 +1,23 @@
-const express = require('express');
-const Joi = require('joi');
-const { Op } = require('sequelize');
-const { Credential, User, Group, CredentialUser, CredentialGroup, UserGroup } = require('../models');
-const { auth, adminAuth } = require('../middleware/auth');
+import express from 'express';
+import Joi from 'joi';
+import {Op} from 'sequelize';
+import {Credential, User, Group, CredentialUser, CredentialGroup, UserGroup} from '../models/index.js';
+import {auth, adminAuth} from '../middleware/auth.js';
 
 const router = express.Router();
 
 // Validation schemas
 const credentialSchema = Joi.object({
-  label: Joi.string().required(),
-  url: Joi.string().uri().required(),
-  urlPattern: Joi.string().optional().allow(''),
-  username: Joi.string().required(),
-  password: Joi.string().required(),
-  description: Joi.string().optional().allow(''),
-  project: Joi.string().optional().allow(''),
-  accessType: Joi.string().valid('individual', 'group', 'all').default('individual'),
-  allowedUsers: Joi.array().items(Joi.number().integer().positive()).optional(),
-  allowedGroups: Joi.array().items(Joi.number().integer().positive()).optional()
+	label: Joi.string().required(),
+	url: Joi.string().uri().required(),
+	urlPattern: Joi.string().optional().allow(''),
+	username: Joi.string().required(),
+	password: Joi.string().required(),
+	description: Joi.string().optional().allow(''),
+	project: Joi.string().optional().allow(''),
+	accessType: Joi.string().valid('individual', 'group', 'all').default('individual'),
+	allowedUsers: Joi.array().items(Joi.number().integer().positive()).optional(),
+	allowedGroups: Joi.array().items(Joi.number().integer().positive()).optional()
 });
 
 // Get all credentials accessible to the user
@@ -29,7 +29,6 @@ router.get('/', auth, async (req, res) => {
     // Get user's groups
     const userGroups = await UserGroup.findAll({
       where: { userId },
-      include: [{ model: Group, as: 'Group' }]
     });
     const groupIds = userGroups.map(ug => ug.groupId);
 
@@ -96,7 +95,7 @@ router.get('/', auth, async (req, res) => {
       include: [
         { model: User, as: 'createdBy', attributes: ['firstName', 'lastName', 'email'] }
       ],
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
 
     res.json({ credentials });
@@ -119,7 +118,6 @@ router.get('/for-url', auth, async (req, res) => {
     // Get user's groups
     const userGroups = await UserGroup.findAll({
       where: { userId },
-      include: [{ model: Group, as: 'Group' }]
     });
     const groupIds = userGroups.map(ug => ug.groupId);
 
@@ -396,4 +394,4 @@ router.get('/projects/list', auth, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

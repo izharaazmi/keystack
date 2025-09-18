@@ -1,23 +1,23 @@
-const express = require('express');
-const jwt = require('jsonwebtoken');
-const Joi = require('joi');
-const { User } = require('../models');
-const { sendVerificationEmail } = require('../utils/email');
-const { auth } = require('../middleware/auth');
+import express from 'express';
+import jwt from 'jsonwebtoken';
+import Joi from 'joi';
+import {User} from '../models/index.js';
+import {sendVerificationEmail} from '../utils/email.js';
+import {auth} from '../middleware/auth.js';
 
 const router = express.Router();
 
 // Validation schemas
 const registerSchema = Joi.object({
-  email: Joi.string().email().required(),
-  password: Joi.string().min(6).required(),
-  firstName: Joi.string().required(),
-  lastName: Joi.string().required()
+	email: Joi.string().email().required(),
+	password: Joi.string().min(6).required(),
+	firstName: Joi.string().required(),
+	lastName: Joi.string().required()
 });
 
 const loginSchema = Joi.object({
-  email: Joi.string().email().required(),
-  password: Joi.string().required()
+	email: Joi.string().email().required(),
+	password: Joi.string().required()
 });
 
 // Register new user
@@ -36,12 +36,18 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'User already exists' });
     }
 
+    // Check if this is the first user (make them admin)
+    const userCount = await User.count();
+    const isFirstUser = userCount === 0;
+    
     // Create new user
     const user = await User.create({
       email,
       password,
       firstName,
-      lastName
+      lastName,
+      role: isFirstUser ? 'admin' : 'user',
+      isEmailVerified: isFirstUser // Skip email verification for first user
     });
 
     // Generate email verification token
@@ -52,8 +58,11 @@ router.post('/register', async (req, res) => {
     await sendVerificationEmail(email, verificationToken);
 
     res.status(201).json({
-      message: 'User registered successfully. Please check your email for verification.',
-      userId: user.id
+      message: isFirstUser 
+        ? 'Admin user created successfully! You can now log in.' 
+        : 'User registered successfully. Please check your email for verification.',
+      userId: user.id,
+      isFirstUser
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -191,4 +200,4 @@ router.get('/me', auth, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

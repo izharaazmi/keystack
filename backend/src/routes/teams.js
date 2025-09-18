@@ -1,15 +1,15 @@
-const express = require('express');
-const Joi = require('joi');
-const { Group, User, UserGroup } = require('../models');
-const { auth, adminAuth } = require('../middleware/auth');
+import express from 'express';
+import Joi from 'joi';
+import {Group, User, UserGroup} from '../models/index.js';
+import {auth, adminAuth} from '../middleware/auth.js';
 
 const router = express.Router();
 
 // Validation schemas
 const groupSchema = Joi.object({
-  name: Joi.string().required(),
-  description: Joi.string().optional().allow(''),
-  members: Joi.array().items(Joi.number().integer().positive()).optional()
+	name: Joi.string().required(),
+	description: Joi.string().optional().allow(''),
+	members: Joi.array().items(Joi.number().integer().positive()).optional()
 });
 
 // Get all groups
@@ -18,11 +18,18 @@ router.get('/', auth, async (req, res) => {
     const groups = await Group.findAll({
       where: { isActive: true },
       include: [
-        { model: User, as: 'members', through: { attributes: [] } },
-        { model: User, as: 'createdBy', attributes: ['firstName', 'lastName', 'email'] }
+        { model: User, as: 'Users', through: { attributes: [] } }
       ],
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
+
+    // Get creator information for each group
+    for (let group of groups) {
+      const creator = await User.findByPk(group.createdById, {
+        attributes: ['firstName', 'lastName', 'email']
+      });
+      group.dataValues.createdBy = creator;
+    }
 
     res.json({ groups });
   } catch (error) {
@@ -58,10 +65,15 @@ router.post('/', auth, async (req, res) => {
 
     const groupWithAssociations = await Group.findByPk(group.id, {
       include: [
-        { model: User, as: 'members', through: { attributes: [] } },
-        { model: User, as: 'createdBy', attributes: ['firstName', 'lastName', 'email'] }
+        { model: User, as: 'Users', through: { attributes: [] } }
       ]
     });
+
+    // Get creator information
+    const creator = await User.findByPk(group.createdById, {
+      attributes: ['firstName', 'lastName', 'email']
+    });
+    groupWithAssociations.dataValues.createdBy = creator;
 
     res.status(201).json({ group: groupWithAssociations });
   } catch (error) {
@@ -113,10 +125,15 @@ router.put('/:id', auth, async (req, res) => {
 
     const updatedGroup = await Group.findByPk(id, {
       include: [
-        { model: User, as: 'members', through: { attributes: [] } },
-        { model: User, as: 'createdBy', attributes: ['firstName', 'lastName', 'email'] }
+        { model: User, as: 'Users', through: { attributes: [] } }
       ]
     });
+
+    // Get creator information
+    const creator = await User.findByPk(updatedGroup.createdById, {
+      attributes: ['firstName', 'lastName', 'email']
+    });
+    updatedGroup.dataValues.createdBy = creator;
 
     res.json({ group: updatedGroup });
   } catch (error) {
@@ -192,10 +209,15 @@ router.post('/:id/members', auth, async (req, res) => {
 
     const groupWithAssociations = await Group.findByPk(id, {
       include: [
-        { model: User, as: 'members', through: { attributes: [] } },
-        { model: User, as: 'createdBy', attributes: ['firstName', 'lastName', 'email'] }
+        { model: User, as: 'Users', through: { attributes: [] } }
       ]
     });
+
+    // Get creator information
+    const creator = await User.findByPk(groupWithAssociations.createdById, {
+      attributes: ['firstName', 'lastName', 'email']
+    });
+    groupWithAssociations.dataValues.createdBy = creator;
 
     res.json({ group: groupWithAssociations });
   } catch (error) {
@@ -225,10 +247,15 @@ router.delete('/:id/members/:userId', auth, async (req, res) => {
 
     const groupWithAssociations = await Group.findByPk(id, {
       include: [
-        { model: User, as: 'members', through: { attributes: [] } },
-        { model: User, as: 'createdBy', attributes: ['firstName', 'lastName', 'email'] }
+        { model: User, as: 'Users', through: { attributes: [] } }
       ]
     });
+
+    // Get creator information
+    const creator = await User.findByPk(groupWithAssociations.createdById, {
+      attributes: ['firstName', 'lastName', 'email']
+    });
+    groupWithAssociations.dataValues.createdBy = creator;
 
     res.json({ group: groupWithAssociations });
   } catch (error) {
@@ -237,4 +264,77 @@ router.delete('/:id/members/:userId', auth, async (req, res) => {
   }
 });
 
-module.exports = router;
+// Batch add users to team
+router.post('/:id/batch-add-members', auth, async (req, res) => {
+	try {
+		const {id} = req.params;
+		const {userIds} = req.body;
+
+		if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+			return res.status(400).json({message: 'userIds array is required'});
+		}
+
+		const group = await Group.findByPk(id);
+		if (!group) {
+			return res.status(404).json({message: 'Group not found'});
+		}
+
+		// Check if user can modify this group
+		if (group.createdById !== req.user.id && req.user.role !== 'admin') {
+			return res.status(403).json({message: 'Not authorized to modify this group'});
+		}
+
+		// Verify all users exist
+		const users = await User.findAll({
+			where: {id: userIds},
+			attributes: ['id']
+		});
+
+		if (users.length !== userIds.length) {
+			return res.status(400).json({message: 'Some users not found'});
+		}
+
+		// Add users to group (skip if already exists)
+		const existingMemberships = await UserGroup.findAll({
+			where: {
+				groupId: id,
+				userId: userIds
+			}
+		});
+
+		const existingUserIds = existingMemberships.map(em => em.userId);
+		const newUserIds = userIds.filter(id => !existingUserIds.includes(id));
+
+		if (newUserIds.length > 0) {
+			await UserGroup.bulkCreate(
+				newUserIds.map(userId => ({
+					groupId: id,
+					userId
+				}))
+			);
+		}
+
+		const groupWithAssociations = await Group.findByPk(id, {
+			include: [
+				{model: User, as: 'Users', through: {attributes: []}}
+			]
+		});
+
+		// Get creator information
+		const creator = await User.findByPk(groupWithAssociations.createdById, {
+			attributes: ['firstName', 'lastName', 'email']
+		});
+		groupWithAssociations.dataValues.createdBy = creator;
+
+		res.json({
+			group: groupWithAssociations,
+			added: newUserIds.length,
+			skipped: existingUserIds.length
+		});
+	} catch (error) {
+		console.error('Batch add members error:', error);
+		res.status(500).json({message: 'Server error'});
+	}
+});
+
+export default router;

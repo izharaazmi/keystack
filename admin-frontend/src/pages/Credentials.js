@@ -1,17 +1,16 @@
-import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from 'react-query';
-import { useForm } from 'react-hook-form';
-import { 
-  Plus, 
-  Search, 
-  Edit, 
-  Trash2, 
-  Eye, 
-  EyeOff,
-  ExternalLink,
-  Filter
+import React, {useState} from 'react';
+import {useQuery, useMutation, useQueryClient} from 'react-query';
+import {useForm} from 'react-hook-form';
+import {
+	Plus,
+	Search,
+	Edit,
+	Trash2,
+	Eye,
+	EyeOff,
+	ExternalLink
 } from 'lucide-react';
-import { api } from '../utils/api';
+import {api} from '../utils/api';
 import toast from 'react-hot-toast';
 
 const Credentials = () => {
@@ -41,15 +40,6 @@ const Credentials = () => {
     return response.data.projects;
   });
 
-  const { data: users } = useQuery('users', async () => {
-    const response = await api.get('/users');
-    return response.data.users;
-  });
-
-  const { data: teams } = useQuery('teams', async () => {
-    const response = await api.get('/teams');
-    return response.data.groups;
-  });
 
   const createMutation = useMutation(
     (data) => api.post('/credentials', data),

@@ -1,39 +1,39 @@
-const { DataTypes } = require('sequelize');
-const { sequelize } = require('../config/database');
+import {DataTypes} from 'sequelize';
+import {sequelize} from '../config/database.js';
 
 const UserGroup = sequelize.define('UserGroup', {
-  id: {
-    type: DataTypes.INTEGER,
-    primaryKey: true,
-    autoIncrement: true
-  },
-  userId: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    field: 'user_id',
-    references: {
-      model: 'users',
-      key: 'id'
-    }
-  },
-  groupId: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    field: 'group_id',
-    references: {
-      model: 'groups',
-      key: 'id'
-    }
-  }
+	id: {
+		type: DataTypes.INTEGER,
+		primaryKey: true,
+		autoIncrement: true
+	},
+	userId: {
+		type: DataTypes.INTEGER,
+		allowNull: false,
+		field: 'user_id',
+		references: {
+			model: 'cp_users',
+			key: 'id'
+		}
+	},
+	groupId: {
+		type: DataTypes.INTEGER,
+		allowNull: false,
+		field: 'group_id',
+		references: {
+			model: 'cp_groups',
+			key: 'id'
+		}
+	}
 }, {
-  tableName: 'user_groups',
-  timestamps: false,
-  indexes: [
-    {
-      unique: true,
-      fields: ['user_id', 'group_id']
-    }
-  ]
+	tableName: 'cp_user_groups',
+	timestamps: false,
+	indexes: [
+		{
+			unique: true,
+			fields: ['user_id', 'group_id']
+		}
+	]
 });
 
-module.exports = UserGroup;
+export default UserGroup;

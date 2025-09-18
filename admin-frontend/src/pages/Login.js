@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Navigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { useAuth } from '../contexts/AuthContext';
-import { Key, Eye, EyeOff } from 'lucide-react';
+import React, {useState, useEffect} from 'react';
+import {Navigate} from 'react-router-dom';
+import {useForm} from 'react-hook-form';
+import {useAuth} from '../contexts/AuthContext';
+import {Key, Eye, EyeOff} from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Login = () => {

@@ -1,18 +1,18 @@
-const express = require('express');
-const Joi = require('joi');
-const { Op } = require('sequelize');
-const { User, Group, UserGroup } = require('../models');
-const { auth, adminAuth } = require('../middleware/auth');
+import express from 'express';
+import Joi from 'joi';
+import {Op} from 'sequelize';
+import {User, Group, UserGroup} from '../models/index.js';
+import {auth, adminAuth} from '../middleware/auth.js';
 
 const router = express.Router();
 
 // Validation schemas
 const updateUserSchema = Joi.object({
-  firstName: Joi.string().optional(),
-  lastName: Joi.string().optional(),
-  email: Joi.string().email().optional(),
-  role: Joi.string().valid('admin', 'user').optional(),
-  isActive: Joi.boolean().optional()
+	firstName: Joi.string().optional(),
+	lastName: Joi.string().optional(),
+	email: Joi.string().email().optional(),
+	role: Joi.string().valid('admin', 'user').optional(),
+	isActive: Joi.boolean().optional()
 });
 
 // Get all users (admin only)
@@ -42,9 +42,9 @@ router.get('/', adminAuth, async (req, res) => {
       where: whereClause,
       attributes: { exclude: ['password', 'emailVerificationToken'] },
       include: [
-        { model: Group, as: 'groups', through: { attributes: [] } }
+        { model: Group, as: 'Groups', through: { attributes: [] } }
       ],
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
 
     res.json({ users });
@@ -67,7 +67,7 @@ router.get('/:id', auth, async (req, res) => {
     const user = await User.findByPk(id, {
       attributes: { exclude: ['password', 'emailVerificationToken'] },
       include: [
-        { model: Group, as: 'groups', through: { attributes: [] } }
+        { model: Group, as: 'Groups', through: { attributes: [] } }
       ]
     });
 
@@ -108,6 +108,22 @@ router.put('/:id', auth, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    // Prevent deactivating the last remaining admin
+    if (value.isActive === false && user.role === 'admin') {
+      const activeAdminCount = await User.count({
+        where: {
+          role: 'admin',
+          isActive: true
+        }
+      });
+
+      if (activeAdminCount <= 1) {
+        return res.status(400).json({ 
+          message: 'Cannot deactivate the last remaining admin account. At least one admin must remain active.' 
+        });
+      }
+    }
+
     // If email is being changed, reset email verification
     if (value.email && value.email !== user.email) {
       value.isEmailVerified = false;
@@ -119,7 +135,7 @@ router.put('/:id', auth, async (req, res) => {
     const updatedUser = await User.findByPk(id, {
       attributes: { exclude: ['password', 'emailVerificationToken'] },
       include: [
-        { model: Group, as: 'groups', through: { attributes: [] } }
+        { model: Group, as: 'Groups', through: { attributes: [] } }
       ]
     });
 
@@ -142,6 +158,22 @@ router.patch('/:id/deactivate', adminAuth, async (req, res) => {
     const user = await User.findByPk(id);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Prevent deactivating the last remaining admin
+    if (user.role === 'admin') {
+      const activeAdminCount = await User.count({
+        where: {
+          role: 'admin',
+          isActive: true
+        }
+      });
+
+      if (activeAdminCount <= 1) {
+        return res.status(400).json({ 
+          message: 'Cannot deactivate the last remaining admin account. At least one admin must remain active.' 
+        });
+      }
     }
 
     await user.update({ isActive: false });
@@ -182,8 +214,8 @@ router.get('/stats/overview', adminAuth, async (req, res) => {
 
     const recentUsers = await User.findAll({
       where: { isActive: true },
-      attributes: ['firstName', 'lastName', 'email', 'createdAt', 'lastLogin'],
-      order: [['createdAt', 'DESC']],
+      attributes: ['firstName', 'lastName', 'email', 'created_at', 'lastLogin'],
+      order: [['created_at', 'DESC']],
       limit: 5
     });
 
@@ -200,4 +232,4 @@ router.get('/stats/overview', adminAuth, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

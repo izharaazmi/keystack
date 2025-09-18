@@ -1,14 +1,13 @@
 import React from 'react';
-import { useQuery } from 'react-query';
-import { 
-  Users, 
-  Key, 
-  UserCheck, 
-  Activity,
-  TrendingUp,
-  Shield
+import {useQuery} from 'react-query';
+import {
+	Users,
+	Key,
+	UserCheck,
+	Activity,
+	Shield
 } from 'lucide-react';
-import { api } from '../utils/api';
+import {api} from '../utils/api';
 
 const Dashboard = () => {
   const { data: stats, isLoading } = useQuery('dashboard-stats', async () => {

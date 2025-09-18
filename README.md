@@ -60,20 +60,39 @@ cp env.example .env
 # Edit .env with your configuration
 ```
 
-3. **Start the backend server:**
+3. **Create admin user and seed sample data:**
+```bash
+cd backend
+npm run create-admin
+npm run seed-credentials
+```
+
+4. **Start the backend server:**
 ```bash
 npm run backend:dev
 ```
 
-4. **Start the admin frontend:**
+5. **Start the admin frontend:**
 ```bash
 npm run admin:dev
 ```
 
-5. **Load the Chrome extension:**
+6. **Load the Chrome extension:**
    - Open Chrome and go to `chrome://extensions/`
    - Enable "Developer mode"
    - Click "Load unpacked" and select the `chrome-extension` folder
+
+### Default Credentials
+
+**Admin Login:**
+- Email: `admin@chromepass.com`
+- Password: `admin123`
+
+**Sample Credentials:**
+The system comes pre-loaded with 8 sample credentials for testing. See `DEFAULT_CREDENTIALS.txt` for the complete list including:
+- GitHub, AWS, Slack, JIRA, Docker Hub, Stripe, Google Workspace, Salesforce
+
+These credentials are automatically created when you run `npm run seed-credentials`.
 
 ### Configuration
 

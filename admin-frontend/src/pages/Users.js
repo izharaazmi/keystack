@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from 'react-query';
-import { Search, UserPlus, Shield, ShieldCheck, UserX, UserCheck } from 'lucide-react';
-import { api } from '../utils/api';
+import React, {useState} from 'react';
+import {useQuery, useMutation, useQueryClient} from 'react-query';
+import {Search, Shield, UserX, UserCheck, Users as UsersIcon, X} from 'lucide-react';
+import {api} from '../utils/api';
 import toast from 'react-hot-toast';
 
 const Users = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [showTeamModal, setShowTeamModal] = useState(false);
+  const [selectedTeam, setSelectedTeam] = useState('');
   const queryClient = useQueryClient();
 
   const { data: users, isLoading } = useQuery(
@@ -22,6 +25,11 @@ const Users = () => {
       return response.data.users;
     }
   );
+
+  const { data: teams } = useQuery('teams', async () => {
+    const response = await api.get('/teams');
+    return response.data.groups;
+  });
 
   const activateMutation = useMutation(
     (id) => api.patch(`/users/${id}/activate`),
@@ -49,12 +57,57 @@ const Users = () => {
     }
   );
 
+  const batchAssignMutation = useMutation(
+    ({ teamId, userIds }) => api.post(`/teams/${teamId}/batch-add-members`, { userIds }),
+    {
+      onSuccess: (data) => {
+        queryClient.invalidateQueries('teams');
+        queryClient.invalidateQueries('users');
+        setSelectedUsers([]);
+        setShowTeamModal(false);
+        setSelectedTeam('');
+        toast.success(`Successfully added ${data.data.added} users to team${data.data.skipped > 0 ? ` (${data.data.skipped} already in team)` : ''}`);
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.message || 'Failed to assign users to team');
+      },
+    }
+  );
+
   const handleToggleStatus = (user) => {
     if (user.isActive) {
       deactivateMutation.mutate(user.id);
     } else {
       activateMutation.mutate(user.id);
     }
+  };
+
+  const handleSelectUser = (userId) => {
+    setSelectedUsers(prev => 
+      prev.includes(userId) 
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedUsers.length === users.length) {
+      setSelectedUsers([]);
+    } else {
+      setSelectedUsers(users.map(user => user.id));
+    }
+  };
+
+  const handleBatchAssign = () => {
+    if (selectedUsers.length === 0) {
+      toast.error('Please select users to assign');
+      return;
+    }
+    if (!selectedTeam) {
+      toast.error('Please select a team');
+      return;
+    }
+    batchAssignMutation.mutate({ teamId: selectedTeam, userIds: selectedUsers });
   };
 
   if (isLoading) {
@@ -112,12 +165,48 @@ const Users = () => {
         </div>
       </div>
 
+      {/* Batch Assignment Controls */}
+      {selectedUsers.length > 0 && (
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <span className="text-sm font-medium text-blue-900">
+                {selectedUsers.length} user{selectedUsers.length !== 1 ? 's' : ''} selected
+              </span>
+              <button
+                onClick={() => setShowTeamModal(true)}
+                className="btn btn-primary btn-sm"
+                disabled={batchAssignMutation.isLoading}
+              >
+                <UsersIcon className="h-4 w-4 mr-2" />
+                Assign to Team
+              </button>
+              <button
+                onClick={() => setSelectedUsers([])}
+                className="btn btn-secondary btn-sm"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Clear Selection
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Users Table */}
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="table">
             <thead>
               <tr>
+                <th>
+                  <input
+                    type="checkbox"
+                    checked={selectedUsers.length === users?.length && users?.length > 0}
+                    onChange={handleSelectAll}
+                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                </th>
                 <th>Name</th>
                 <th>Email</th>
                 <th>Role</th>
@@ -131,6 +220,14 @@ const Users = () => {
             <tbody>
               {users?.map((user) => (
                 <tr key={user.id}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={selectedUsers.includes(user.id)}
+                      onChange={() => handleSelectUser(user.id)}
+                      className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    />
+                  </td>
                   <td className="font-medium">
                     {user.firstName} {user.lastName}
                   </td>
@@ -204,6 +301,56 @@ const Users = () => {
           <p className="mt-1 text-sm text-gray-500">
             Try adjusting your search or filter criteria.
           </p>
+        </div>
+      )}
+
+      {/* Team Selection Modal */}
+      {showTeamModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-3">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
+                Assign {selectedUsers.length} user{selectedUsers.length !== 1 ? 's' : ''} to Team
+              </h3>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Select Team
+                </label>
+                <select
+                  value={selectedTeam}
+                  onChange={(e) => setSelectedTeam(e.target.value)}
+                  className="input w-full"
+                >
+                  <option value="">Choose a team...</option>
+                  {teams?.map((team) => (
+                    <option key={team.id} value={team.id}>
+                      {team.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => {
+                    setShowTeamModal(false);
+                    setSelectedTeam('');
+                  }}
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleBatchAssign}
+                  disabled={!selectedTeam || batchAssignMutation.isLoading}
+                  className="btn btn-primary"
+                >
+                  {batchAssignMutation.isLoading ? 'Assigning...' : 'Assign to Team'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Key, 
-  Users, 
-  UserCheck, 
-  Menu, 
-  X,
-  LogOut
+import React, {useState} from 'react';
+import {Outlet, Link, useLocation} from 'react-router-dom';
+import {
+	LayoutDashboard,
+	Key,
+	Users,
+	UserCheck,
+	Menu,
+	X,
+	LogOut
 } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import {useAuth} from '../contexts/AuthContext';
 
 const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
