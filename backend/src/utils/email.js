@@ -1,16 +1,38 @@
 import nodemailer from 'nodemailer';
 
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: process.env.EMAIL_PORT,
-  secure: false, // true for 465, false for other ports
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+// Check if email credentials are configured
+const isEmailConfigured = () => {
+  return process.env.EMAIL_HOST && 
+         process.env.EMAIL_USER && 
+         process.env.EMAIL_PASS;
+};
+
+// Create transporter only if email is configured
+let transporter = null;
+if (isEmailConfigured()) {
+  try {
+    transporter = nodemailer.createTransport({
+      host: process.env.EMAIL_HOST,
+      port: process.env.EMAIL_PORT,
+      secure: false, // true for 465, false for other ports
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+  } catch (error) {
+    console.warn('Failed to create email transporter:', error.message);
+    transporter = null;
+  }
+}
 
 const sendVerificationEmail = async (email, token) => {
+  // Skip email sending if not configured
+  if (!isEmailConfigured() || !transporter) {
+    console.log('Email not configured, skipping verification email for:', email);
+    return;
+  }
+
   try {
     const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${token}`;
     
@@ -40,10 +62,10 @@ const sendVerificationEmail = async (email, token) => {
     };
 
     await transporter.sendMail(mailOptions);
-    console.log('Verification email sent successfully');
+    console.log('Verification email sent successfully to:', email);
   } catch (error) {
-    console.error('Error sending verification email:', error);
-    throw error;
+    // Log error but don't throw - fail silently
+    console.warn('Failed to send verification email to', email, ':', error.message);
   }
 };
 

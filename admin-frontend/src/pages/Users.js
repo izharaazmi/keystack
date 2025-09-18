@@ -1,6 +1,6 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {useQuery, useMutation, useQueryClient} from 'react-query';
-import {Search, Shield, UserX, UserCheck, Users as UsersIcon, X} from 'lucide-react';
+import {Search, Shield, UserX, UserCheck, Users as UsersIcon, X, Plus} from 'lucide-react';
 import {api} from '../utils/api';
 import toast from 'react-hot-toast';
 
@@ -11,6 +11,14 @@ const Users = () => {
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState('');
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [newUser, setNewUser] = useState({
+    email: '',
+    password: '',
+    firstName: '',
+    lastName: '',
+    role: 'user'
+  });
   const queryClient = useQueryClient();
 
   const { data: users, isLoading } = useQuery(
@@ -30,6 +38,18 @@ const Users = () => {
     const response = await api.get('/teams');
     return response.data.groups;
   });
+
+  const { data: pendingUsers } = useQuery('pendingUsers', async () => {
+    const response = await api.get('/users/pending');
+    return response.data.users;
+  });
+
+  // Auto-set role to admin if it's the first user
+  useEffect(() => {
+    if (users && users.length === 0) {
+      setNewUser(prev => ({ ...prev, role: 'admin' }));
+    }
+  }, [users]);
 
   const activateMutation = useMutation(
     (id) => api.patch(`/users/${id}/activate`),
@@ -74,6 +94,54 @@ const Users = () => {
     }
   );
 
+  const createUserMutation = useMutation(
+    (userData) => api.post('/auth/register', userData),
+    {
+      onSuccess: () => {
+        toast.success('User created successfully');
+        queryClient.invalidateQueries('users');
+        setShowUserModal(false);
+        setNewUser({
+          email: '',
+          password: '',
+          firstName: '',
+          lastName: '',
+          role: 'user'
+        });
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.message || 'Failed to create user');
+      }
+    }
+  );
+
+  const updateUserRoleMutation = useMutation(
+    ({ userId, role }) => api.patch(`/users/${userId}/role`, { role }),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('users');
+        toast.success('User role updated successfully');
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.message || 'Failed to update user role');
+      }
+    }
+  );
+
+  const approveUserMutation = useMutation(
+    (userId) => api.patch(`/users/${userId}/approve`),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('users');
+        queryClient.invalidateQueries('pendingUsers');
+        toast.success('User approved successfully');
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.message || 'Failed to approve user');
+      }
+    }
+  );
+
   const handleToggleStatus = (user) => {
     if (user.isActive) {
       deactivateMutation.mutate(user.id);
@@ -110,6 +178,25 @@ const Users = () => {
     batchAssignMutation.mutate({ teamId: selectedTeam, userIds: selectedUsers });
   };
 
+  const handleCreateUser = (e) => {
+    e.preventDefault();
+    if (!newUser.email || !newUser.password || !newUser.firstName || !newUser.lastName) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+    createUserMutation.mutate(newUser);
+  };
+
+  const handleRoleChange = (userId, newRole) => {
+    // Check if this would leave no admins
+    const currentAdmins = users.filter(user => user.role === 'admin' && user.id !== userId);
+    if (newRole === 'user' && currentAdmins.length === 0) {
+      toast.error('Cannot change role: At least one admin must remain');
+      return;
+    }
+    updateUserRoleMutation.mutate({ userId, role: newRole });
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -120,11 +207,20 @@ const Users = () => {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Users</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Manage user accounts and permissions
-        </p>
+      <div className="mb-8 flex justify-between items-start">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Users</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Manage user accounts and permissions
+          </p>
+        </div>
+        <button
+          onClick={() => setShowUserModal(true)}
+          className="btn btn-primary flex items-center"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add User
+        </button>
       </div>
 
       {/* Filters */}
@@ -285,6 +381,32 @@ const Users = () => {
                           <UserCheck className="h-4 w-4" />
                         )}
                       </button>
+                      <div className="flex space-x-1">
+                        <button
+                          onClick={() => handleRoleChange(user.id, 'user')}
+                          disabled={user.role === 'user' || updateUserRoleMutation.isLoading}
+                          className={`px-2 py-1 text-xs rounded ${
+                            user.role === 'user'
+                              ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                              : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                          }`}
+                          title="Change to User role"
+                        >
+                          User
+                        </button>
+                        <button
+                          onClick={() => handleRoleChange(user.id, 'admin')}
+                          disabled={user.role === 'admin' || updateUserRoleMutation.isLoading}
+                          className={`px-2 py-1 text-xs rounded ${
+                            user.role === 'admin'
+                              ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                              : 'bg-red-100 text-red-700 hover:bg-red-200'
+                          }`}
+                          title="Change to Admin role"
+                        >
+                          Admin
+                        </button>
+                      </div>
                     </div>
                   </td>
                 </tr>
@@ -301,6 +423,82 @@ const Users = () => {
           <p className="mt-1 text-sm text-gray-500">
             Try adjusting your search or filter criteria.
           </p>
+        </div>
+      )}
+
+      {/* Pending Users Section */}
+      {pendingUsers && pendingUsers.length > 0 && (
+        <div className="mt-8">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Pending Approvals</h2>
+            <p className="text-sm text-gray-500">
+              Users waiting for admin approval to access the system
+            </p>
+          </div>
+          
+          <div className="card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Email Verified</th>
+                    <th>Registered</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pendingUsers.map((user) => (
+                    <tr key={user.id}>
+                      <td className="font-medium">
+                        {user.firstName} {user.lastName}
+                      </td>
+                      <td>{user.email}</td>
+                      <td>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          user.role === 'admin' 
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {user.role}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          user.isEmailVerified 
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {user.isEmailVerified ? 'Verified' : 'Pending'}
+                        </span>
+                      </td>
+                      <td>
+                        {new Date(user.createdAt).toLocaleDateString()}
+                      </td>
+                      <td>
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => approveUserMutation.mutate(user.id)}
+                            disabled={!user.isEmailVerified || approveUserMutation.isLoading}
+                            className={`px-3 py-1 text-sm rounded ${
+                              !user.isEmailVerified
+                                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                : 'bg-green-100 text-green-700 hover:bg-green-200'
+                            }`}
+                            title={!user.isEmailVerified ? 'User must verify email first' : 'Approve user'}
+                          >
+                            {approveUserMutation.isLoading ? 'Approving...' : 'Approve'}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
 
@@ -350,6 +548,135 @@ const Users = () => {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create User Modal */}
+      {showUserModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Create New User</h3>
+              <button
+                onClick={() => setShowUserModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleCreateUser} className="space-y-4" autoComplete="off">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    First Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={newUser.firstName}
+                    onChange={(e) => setNewUser({...newUser, firstName: e.target.value})}
+                    className="input w-full"
+                    autoComplete="off"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Last Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={newUser.lastName}
+                    onChange={(e) => setNewUser({...newUser, lastName: e.target.value})}
+                    className="input w-full"
+                    autoComplete="off"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email *
+                </label>
+                <input
+                  type="email"
+                  value={newUser.email}
+                  onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                  className="input w-full"
+                  autoComplete="off"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Password *
+                </label>
+                <input
+                  type="password"
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                  className="input w-full"
+                  autoComplete="new-password"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Role
+                </label>
+                <div className="flex items-center space-x-4">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="role"
+                      value="user"
+                      checked={newUser.role === 'user'}
+                      onChange={(e) => setNewUser({...newUser, role: e.target.value})}
+                      className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">User</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="role"
+                      value="admin"
+                      checked={newUser.role === 'admin'}
+                      onChange={(e) => setNewUser({...newUser, role: e.target.value})}
+                      className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">Admin</span>
+                  </label>
+                </div>
+                {users && users.length === 0 && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    The first user will automatically be assigned admin privileges.
+                  </p>
+                )}
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowUserModal(false)}
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={createUserMutation.isLoading}
+                  className="btn btn-primary"
+                >
+                  {createUserMutation.isLoading ? 'Creating...' : 'Create User'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

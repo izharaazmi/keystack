@@ -41,9 +41,6 @@ router.get('/', adminAuth, async (req, res) => {
     const users = await User.findAll({
       where: whereClause,
       attributes: { exclude: ['password', 'emailVerificationToken'] },
-      include: [
-        { model: Group, as: 'Groups', through: { attributes: [] } }
-      ],
       order: [['created_at', 'DESC']]
     });
 
@@ -228,6 +225,86 @@ router.get('/stats/overview', adminAuth, async (req, res) => {
     });
   } catch (error) {
     console.error('Get user stats error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Update user role (admin only)
+router.patch('/:id/role', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    // Validate role
+    if (!role || !['admin', 'user'].includes(role)) {
+      return res.status(400).json({ message: 'Invalid role. Must be "admin" or "user"' });
+    }
+
+    const user = await User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check if this would leave no admins
+    if (user.role === 'admin' && role === 'user') {
+      const adminCount = await User.count({ where: { role: 'admin' } });
+      if (adminCount <= 1) {
+        return res.status(400).json({ message: 'Cannot change role: At least one admin must remain' });
+      }
+    }
+
+    // Update the user's role
+    await user.update({ role });
+
+    res.json({ message: 'User role updated successfully' });
+  } catch (error) {
+    console.error('Update user role error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get pending users for approval (admin only)
+router.get('/pending', adminAuth, async (req, res) => {
+  try {
+    const pendingUsers = await User.findAll({
+      where: { 
+        isActive: false,
+        isEmailVerified: true // Only show users who have verified their email
+      },
+      attributes: { exclude: ['password', 'emailVerificationToken'] },
+      order: [['created_at', 'ASC']]
+    });
+
+    res.json({ users: pendingUsers });
+  } catch (error) {
+    console.error('Get pending users error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Approve user (admin only)
+router.patch('/:id/approve', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (user.isActive) {
+      return res.status(400).json({ message: 'User is already approved' });
+    }
+
+    if (!user.isEmailVerified) {
+      return res.status(400).json({ message: 'User must verify their email before approval' });
+    }
+
+    await user.update({ isActive: true });
+
+    res.json({ message: 'User approved successfully' });
+  } catch (error) {
+    console.error('Approve user error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

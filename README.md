@@ -15,9 +15,9 @@ A comprehensive password-sharing solution with backend API, admin frontend, and 
 
 ## Architecture
 
-### Backend API (Node.js + Express + SQLite)
+### Backend API (Node.js + Express + MySQL)
 - RESTful API with JWT authentication
-- SQLite database with Sequelize ORM
+- MySQL database with Sequelize ORM
 - Email verification system
 - Role-based access control (Admin/User)
 - Rate limiting and security middleware
@@ -41,7 +41,7 @@ A comprehensive password-sharing solution with backend API, admin frontend, and 
 ### Prerequisites
 - Node.js 16+ 
 - npm or yarn
-- SQLite3
+- MySQL 5.7+ or 8.0+
 - Chrome browser (for extension)
 
 ### Installation
@@ -100,13 +100,25 @@ These credentials are automatically created when you run `npm run seed-credentia
 ```env
 NODE_ENV=development
 PORT=3001
-DB_PATH=./database.sqlite
+
+# MySQL Database Configuration
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=chrome_pass
+DB_USER=root
+DB_PASSWORD=your-mysql-password
+
+# JWT Configuration
 JWT_SECRET=your-super-secret-jwt-key-here
 JWT_EXPIRES_IN=7d
+
+# Email Configuration
 EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
 EMAIL_USER=your-email@gmail.com
 EMAIL_PASS=your-app-password
+
+# Frontend URLs
 FRONTEND_URL=http://localhost:3000
 ADMIN_URL=http://localhost:3002
 ```
@@ -255,7 +267,7 @@ For issues and questions:
 
 ## Roadmap
 
-- [ ] MySQL/PostgreSQL support
+- [ ] PostgreSQL support
 - [ ] Two-factor authentication
 - [ ] Audit logging
 - [ ] API rate limiting per user

@@ -12,7 +12,8 @@ const registerSchema = Joi.object({
 	email: Joi.string().email().required(),
 	password: Joi.string().min(6).required(),
 	firstName: Joi.string().required(),
-	lastName: Joi.string().required()
+	lastName: Joi.string().required(),
+	role: Joi.string().valid('admin', 'user').optional()
 });
 
 const loginSchema = Joi.object({
@@ -28,7 +29,7 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: error.details[0].message });
     }
 
-    const { email, password, firstName, lastName } = value;
+    const { email, password, firstName, lastName, role } = value;
 
     // Check if user already exists
     const existingUser = await User.findOne({ where: { email } });
@@ -36,9 +37,19 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    // Check if this is the first user (make them admin)
+    // Check if this is the first user
     const userCount = await User.count();
     const isFirstUser = userCount === 0;
+    
+    // Determine the role to assign
+    let assignedRole = 'user'; // Default role
+    if (isFirstUser) {
+      // First user is always admin, regardless of what's passed
+      assignedRole = 'admin';
+    } else if (role) {
+      // Use the provided role (admin or user)
+      assignedRole = role;
+    }
     
     // Create new user
     const user = await User.create({
@@ -46,23 +57,40 @@ router.post('/register', async (req, res) => {
       password,
       firstName,
       lastName,
-      role: isFirstUser ? 'admin' : 'user',
-      isEmailVerified: isFirstUser // Skip email verification for first user
+      role: assignedRole,
+      isEmailVerified: isFirstUser, // Skip email verification for first user
+      isActive: isFirstUser // First user is automatically active, others need approval
     });
 
     // Generate email verification token
     const verificationToken = user.generateEmailVerificationToken();
     await user.save();
 
-    // Send verification email
-    await sendVerificationEmail(email, verificationToken);
+    // Send verification email (fails silently if email not configured)
+    try {
+      await sendVerificationEmail(email, verificationToken);
+    } catch (error) {
+      // Email sending failed, but don't fail the registration
+      console.warn('Email sending failed during registration:', error.message);
+    }
 
+    // Check if email is configured to provide appropriate message
+    const emailConfigured = process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASS;
+    
     res.status(201).json({
       message: isFirstUser 
         ? 'Admin user created successfully! You can now log in.' 
-        : 'User registered successfully. Please check your email for verification.',
+        : assignedRole === 'admin'
+          ? emailConfigured 
+            ? 'Admin user registered successfully. Please check your email for verification and wait for approval.'
+            : 'Admin user registered successfully. Please wait for approval.'
+          : emailConfigured
+            ? 'User registered successfully. Please check your email for verification and wait for admin approval.'
+            : 'User registered successfully. Please wait for admin approval.',
       userId: user.id,
-      isFirstUser
+      isFirstUser,
+      requiresApproval: !isFirstUser,
+      emailConfigured
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -96,6 +124,11 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Account is deactivated' });
     }
 
+    // Only allow admin users to login to backend
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied. Only administrators can access the admin dashboard. Please use the Chrome extension to access your credentials.' });
+    }
+
     // Compare password
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
@@ -126,6 +159,67 @@ router.post('/login', async (req, res) => {
     });
   } catch (error) {
     console.error('Login error:', error);
+    res.status(500).json({ message: 'Server error during login' });
+  }
+});
+
+// Login for Chrome extension (allows both admin and user roles)
+router.post('/extension-login', async (req, res) => {
+  try {
+    const { error, value } = loginSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+
+    const { email, password } = value;
+
+    // Find user
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+
+    // Check if email is verified
+    if (!user.isEmailVerified) {
+      return res.status(400).json({ message: 'Please verify your email before logging in' });
+    }
+
+    // Check if account is active
+    if (!user.isActive) {
+      return res.status(400).json({ message: 'Account is pending admin approval' });
+    }
+
+    // Compare password
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+
+    // Update last login
+    user.lastLogin = new Date();
+    await user.save();
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    );
+
+    res.json({
+      message: 'Login successful',
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        isActive: user.isActive
+      }
+    });
+  } catch (error) {
+    console.error('Extension login error:', error);
     res.status(500).json({ message: 'Server error during login' });
   }
 });
