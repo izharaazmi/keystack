@@ -58,11 +58,11 @@ const Credentials = () => {
     }
   }, [sortField, sortDirection]);
 
-  const SortableHeader = useCallback(({ field, children, align = 'left' }) => {
+  const SortableHeader = useCallback(({ field, children, align = 'left', className = '' }) => {
     const alignmentClass = align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : 'text-left';
     return (
       <th 
-        className={`cursor-pointer hover:bg-gray-50 select-none ${alignmentClass}`}
+        className={`cursor-pointer hover:bg-gray-50 select-none ${alignmentClass} ${className}`}
         onClick={() => handleSort(field)}
       >
         <div className={`flex items-center space-x-1 ${align === 'center' ? 'justify-center' : align === 'right' ? 'justify-end' : 'justify-start'}`}>
@@ -351,11 +351,11 @@ const Credentials = () => {
           <table className="table">
             <thead>
               <tr>
-                <SortableHeader field="id" align="center">ID</SortableHeader>
-                <SortableHeader field="label">Label & URL</SortableHeader>
-                <SortableHeader field="username">Username</SortableHeader>
-                <th>Access</th>
-                <th className="text-center">Actions</th>
+                <SortableHeader field="id" align="center" className="w-16">ID</SortableHeader>
+                <SortableHeader field="label" className="w-auto">Label & URL</SortableHeader>
+                <SortableHeader field="username" className="w-auto">Username</SortableHeader>
+                <th className="w-32 text-center !text-center">Access</th>
+                <th className="w-32 text-center !text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -435,7 +435,7 @@ const Credentials = () => {
                       >
                         <Edit className="h-4 w-4" />
                         <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                          Edit credential
+                          Edit
                           <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
                         </div>
                       </button>
@@ -445,7 +445,7 @@ const Credentials = () => {
                       >
                         <Trash2 className="h-4 w-4" />
                         <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                          Delete credential
+                          Delete
                           <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
                         </div>
                       </button>

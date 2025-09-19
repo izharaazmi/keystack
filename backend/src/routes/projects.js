@@ -22,7 +22,7 @@ router.get('/', auth, async (req, res) => {
       order: [['created_at', 'DESC']]
     });
 
-    // Get creator information and credential count for each project
+    // Get creator information, credential count, and access counts for each project
     for (let project of projects) {
       const creator = await User.findByPk(project.created_by_id, {
         attributes: ['first_name', 'last_name', 'email']
@@ -34,6 +34,18 @@ router.get('/', auth, async (req, res) => {
         where: { project_id: project.id }
       });
       project.dataValues.credentialsCount = credentialCount;
+
+      // Get user and team counts for this project
+      const userCount = await ProjectUser.count({
+        where: { project_id: project.id }
+      });
+      
+      const teamCount = await ProjectGroup.count({
+        where: { project_id: project.id }
+      });
+
+      project.dataValues.user_count = userCount;
+      project.dataValues.team_count = teamCount;
     }
 
     res.json({ projects });

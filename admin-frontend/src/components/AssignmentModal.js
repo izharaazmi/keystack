@@ -84,6 +84,7 @@ const AssignmentModal = ({
       onSuccess: () => {
         queryClient.invalidateQueries([`${type}-users`, itemId]);
         queryClient.invalidateQueries([`${type}s`]);
+        queryClient.invalidateQueries([`${type}s-page`]);
         toast.success('Users assigned successfully');
         setSelectedUsers([]);
       },
@@ -105,6 +106,7 @@ const AssignmentModal = ({
       onSuccess: () => {
         queryClient.invalidateQueries([`${type}-teams`, itemId]);
         queryClient.invalidateQueries([`${type}s`]);
+        queryClient.invalidateQueries([`${type}s-page`]);
         toast.success('Teams assigned successfully');
         setSelectedTeams([]);
       },
@@ -123,6 +125,7 @@ const AssignmentModal = ({
       onSuccess: () => {
         queryClient.invalidateQueries([`${type}-users`, itemId]);
         queryClient.invalidateQueries([`${type}s`]);
+        queryClient.invalidateQueries([`${type}s-page`]);
         toast.success('User removed successfully');
       },
       onError: (error) => {
@@ -140,6 +143,7 @@ const AssignmentModal = ({
       onSuccess: () => {
         queryClient.invalidateQueries([`${type}-teams`, itemId]);
         queryClient.invalidateQueries([`${type}s`]);
+        queryClient.invalidateQueries([`${type}s-page`]);
         toast.success('Team removed successfully');
       },
       onError: (error) => {

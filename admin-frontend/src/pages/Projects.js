@@ -1,5 +1,6 @@
 import React, {useState, useMemo, useCallback, useEffect} from 'react';
-import {useQuery} from 'react-query';
+import {useQuery, useMutation, useQueryClient} from 'react-query';
+import toast from 'react-hot-toast';
 import {
 	Search,
 	Folder,
@@ -9,10 +10,16 @@ import {
 	ChevronUp,
 	ChevronDown,
 	Users,
-	Settings
+	Settings,
+	User,
+	Edit,
+	Trash2,
+	Plus
 } from 'lucide-react';
 import {api} from '../utils/api';
 import AssignmentModal from '../components/AssignmentModal';
+import EditProjectModal from '../components/EditProjectModal';
+import CreateProjectModal from '../components/CreateProjectModal';
 
 const Projects = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -26,8 +33,11 @@ const Projects = () => {
   const [selectedProject, setSelectedProject] = useState(null);
   const [assignedUsers, setAssignedUsers] = useState([]);
   const [assignedTeams, setAssignedTeams] = useState([]);
-  const [projectStats, setProjectStats] = useState({});
-  const [statsLoading, setStatsLoading] = useState(false);
+  const [initialTab, setInitialTab] = useState('users');
+  const [showModal, setShowModal] = useState(false);
+  const [editingProject, setEditingProject] = useState(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const queryClient = useQueryClient();
 
   // Debounce search term to prevent excessive filtering
   useEffect(() => {
@@ -77,35 +87,6 @@ const Projects = () => {
     if (projectTeams) setAssignedTeams(projectTeams);
   }, [projectTeams]);
 
-  // Fetch user and team counts for all projects
-  const fetchProjectStats = async () => {
-    if (!projects) return;
-    
-    setStatsLoading(true);
-    const stats = {};
-    for (const project of projects) {
-      try {
-        const [usersResponse, teamsResponse] = await Promise.all([
-          api.get(`/projects/${project.id}/users`),
-          api.get(`/projects/${project.id}/teams`)
-        ]);
-        
-        stats[project.id] = {
-          userCount: usersResponse.data.users.length,
-          teamCount: teamsResponse.data.teams.length
-        };
-      } catch (error) {
-        console.error(`Error fetching stats for project ${project.id}:`, error);
-        stats[project.id] = { userCount: 0, teamCount: 0 };
-      }
-    }
-    setProjectStats(stats);
-    setStatsLoading(false);
-  };
-
-  useEffect(() => {
-    fetchProjectStats();
-  }, [projects]);
 
   const handleSort = useCallback((field) => {
     if (sortField === field) {
@@ -121,15 +102,42 @@ const Projects = () => {
     localStorage.setItem('projects-viewMode', mode);
   };
 
-  const handleManageAccess = (project) => {
+  const handleManageAccess = (project, tab = 'users') => {
     setSelectedProject(project);
+    setInitialTab(tab);
     setShowAssignmentModal(true);
   };
 
   const handleAssignmentModalClose = () => {
     setShowAssignmentModal(false);
-    // Refresh project stats when modal closes
-    fetchProjectStats();
+  };
+
+  const deleteMutation = useMutation(
+    (id) => api.delete(`/projects/${id}`),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('projects-page');
+        toast.success('Project deleted successfully');
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.message || 'Failed to delete project');
+      },
+    }
+  );
+
+  const handleCreate = () => {
+    setShowCreateModal(true);
+  };
+
+  const handleEdit = (project) => {
+    setEditingProject(project);
+    setShowModal(true);
+  };
+
+  const handleDelete = (id) => {
+    if (window.confirm('Are you sure you want to delete this project?')) {
+      deleteMutation.mutate(id);
+    }
   };
 
   const SortableHeader = useCallback(({ field, children, align = 'left' }) => {
@@ -203,25 +211,42 @@ const Projects = () => {
         <div className="flex items-center space-x-2">
           <button
             onClick={() => handleViewModeChange('cards')}
-            className={`p-2 rounded-md ${
+            className={`p-2 rounded-md relative group ${
               viewMode === 'cards'
                 ? 'bg-primary-100 text-primary-600'
                 : 'text-gray-400 hover:text-gray-600'
             }`}
-            title="Card view"
           >
             <Grid3X3 className="h-5 w-5" />
+            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+              Card view
+              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+            </div>
           </button>
           <button
             onClick={() => handleViewModeChange('table')}
-            className={`p-2 rounded-md ${
+            className={`p-2 rounded-md relative group ${
               viewMode === 'table'
                 ? 'bg-primary-100 text-primary-600'
                 : 'text-gray-400 hover:text-gray-600'
             }`}
-            title="Table view"
           >
             <List className="h-5 w-5" />
+            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+              Table view
+              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+            </div>
+          </button>
+          <button
+            onClick={handleCreate}
+            className="btn btn-primary flex items-center space-x-2 relative group"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Add Project</span>
+            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+              Create new project
+              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+            </div>
           </button>
         </div>
       </div>
@@ -266,13 +291,59 @@ const Projects = () => {
                     {project.credentialsCount} {project.credentialsCount === 1 ? 'credential' : 'credentials'}
                   </span>
                 </div>
-                <button
-                  onClick={() => handleManageAccess(project)}
-                  className="text-blue-600 hover:text-blue-800"
-                  title="Manage user and team access"
-                >
-                  <Users className="h-4 w-4" />
-                </button>
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-4 text-sm">
+                    <button
+                      onClick={() => handleManageAccess(project, 'users')}
+                      className="flex items-center space-x-1 text-primary-600 hover:text-primary-800 transition-colors relative group"
+                    >
+                      <User className="h-4 w-4" />
+                      <span>{project.user_count || 0}</span>
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                        Manage user access
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => handleManageAccess(project, 'teams')}
+                      className="flex items-center space-x-1 text-primary-600 hover:text-primary-800 transition-colors relative group"
+                    >
+                      <Users className="h-4 w-4" />
+                      <span>{project.team_count || 0}</span>
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                        Manage team access
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+                      </div>
+                    </button>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => handleEdit(project)}
+                      className="text-primary-600 hover:text-primary-800 relative group"
+                    >
+                      <Edit className="h-4 w-4" />
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                        Edit
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => handleDelete(project.id)}
+                      disabled={project.credentialsCount > 0}
+                      className={`relative group ${
+                        project.credentialsCount > 0 
+                          ? 'text-gray-400 cursor-not-allowed' 
+                          : 'text-red-600 hover:text-red-800'
+                      }`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                        {project.credentialsCount > 0 ? 'Not Empty' : 'Delete'}
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           ))}
@@ -283,12 +354,11 @@ const Projects = () => {
             <table className="table">
               <thead>
                 <tr>
-                  <SortableHeader field="id" align="center">ID</SortableHeader>
-                  <SortableHeader field="name">Project</SortableHeader>
-                  <SortableHeader field="credentialCount" align="center">Credentials</SortableHeader>
-                  <th className="text-center">Users</th>
-                  <th className="text-center">Teams</th>
-                  <th className="text-center">Actions</th>
+                  <SortableHeader field="id" align="center" className="w-16">ID</SortableHeader>
+                  <SortableHeader field="name" className="w-auto">Project</SortableHeader>
+                  <SortableHeader field="credentialCount" align="center" className="w-32">Credentials</SortableHeader>
+                  <th className="w-32 text-center !text-center">Access</th>
+                  <th className="w-32 text-center !text-center">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -319,31 +389,59 @@ const Projects = () => {
                       </div>
                     </td>
                     <td className="text-center">
-                      {statsLoading ? (
-                        <div className="animate-pulse bg-gray-200 h-4 w-16 mx-auto rounded"></div>
-                      ) : (
-                        <span className="text-sm text-gray-600">
-                          {projectStats[project.id]?.userCount || 0} {projectStats[project.id]?.userCount === 1 ? 'user' : 'users'}
-                        </span>
-                      )}
+                      <div className="flex items-center space-x-6 text-sm">
+                        <button
+                          onClick={() => handleManageAccess(project, 'users')}
+                          className="flex items-center space-x-1 text-primary-600 hover:text-primary-800 transition-colors relative group"
+                        >
+                          <User className="h-4 w-4" />
+                          <span>{project.user_count || 0}</span>
+                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                            Manage user access
+                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => handleManageAccess(project, 'teams')}
+                          className="flex items-center space-x-1 text-primary-600 hover:text-primary-800 transition-colors relative group"
+                        >
+                          <Users className="h-4 w-4" />
+                          <span>{project.team_count || 0}</span>
+                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                            Manage team access
+                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+                          </div>
+                        </button>
+                      </div>
                     </td>
                     <td className="text-center">
-                      {statsLoading ? (
-                        <div className="animate-pulse bg-gray-200 h-4 w-16 mx-auto rounded"></div>
-                      ) : (
-                        <span className="text-sm text-gray-600">
-                          {projectStats[project.id]?.teamCount || 0} {projectStats[project.id]?.teamCount === 1 ? 'team' : 'teams'}
-                        </span>
-                      )}
-                    </td>
-                    <td className="text-center">
-                      <button
-                        onClick={() => handleManageAccess(project)}
-                        className="text-blue-600 hover:text-blue-800"
-                        title="Manage user and team access"
-                      >
-                        <Users className="h-4 w-4" />
-                      </button>
+                      <div className="flex space-x-4 justify-center">
+                        <button
+                          onClick={() => handleEdit(project)}
+                          className="text-primary-600 hover:text-primary-800 relative group"
+                        >
+                          <Edit className="h-4 w-4" />
+                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                            Edit
+                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => handleDelete(project.id)}
+                          disabled={project.credentialsCount > 0}
+                          className={`relative group ${
+                            project.credentialsCount > 0 
+                              ? 'text-gray-400 cursor-not-allowed' 
+                              : 'text-red-600 hover:text-red-800'
+                          }`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                        {project.credentialsCount > 0 ? 'Not Empty' : 'Delete'}
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+                      </div>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -368,6 +466,26 @@ const Projects = () => {
         </div>
       )}
 
+      {/* Create Project Modal */}
+      <CreateProjectModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={() => {
+          setShowCreateModal(false);
+        }}
+      />
+
+      {/* Edit Project Modal */}
+      <EditProjectModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        project={editingProject}
+        onSuccess={() => {
+          setEditingProject(null);
+          setShowModal(false);
+        }}
+      />
+
       {/* Assignment Modal */}
       <AssignmentModal
         isOpen={showAssignmentModal}
@@ -377,6 +495,7 @@ const Projects = () => {
         itemName={selectedProject?.name}
         assignedUsers={assignedUsers}
         assignedTeams={assignedTeams}
+        initialTab={initialTab}
       />
     </div>
   );

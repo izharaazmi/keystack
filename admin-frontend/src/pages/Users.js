@@ -238,10 +238,13 @@ const Users = () => {
                       {user.id !== currentUser?.id && (
                         <button
                           onClick={() => handleEditUser(user)}
-                          className="ml-2 p-1 text-gray-400 hover:text-blue-600 transition-colors"
-                          title="Edit user"
+                          className="ml-2 p-1 text-gray-400 hover:text-blue-600 transition-colors relative group"
                         >
                           <Edit3 className="h-4 w-4" />
+                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                            Edit user
+                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+                          </div>
                         </button>
                       )}
                     </div>
@@ -249,23 +252,30 @@ const Users = () => {
                   <td>{user.email}</td>
                   <td className="text-center">
                     {user.id === currentUser?.id ? (
-                      <div className="inline-flex items-center justify-center w-8 h-8 rounded-full text-yellow-500" title="Cannot change your own role">
+                      <div className="inline-flex items-center justify-center w-8 h-8 rounded-full text-yellow-500 relative group">
                         <Lock className="w-5 h-5" />
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                          Cannot change your own role
+                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+                        </div>
                       </div>
                     ) : user.state !== STATES.ACTIVE ? (
-                      <div className="inline-flex items-center justify-center w-8 h-8 rounded-full text-gray-400" title="Cannot change role for non-active users">
+                      <div className="inline-flex items-center justify-center w-8 h-8 rounded-full text-gray-400 relative group">
                         <Lock className="w-5 h-5" />
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                          Cannot change role for non-active users
+                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+                        </div>
                       </div>
                     ) : (
                       <button
                         onClick={onRoleChange(user)}
                         disabled={updateUserRoleLoading}
-                        className={`inline-flex items-center justify-center w-8 h-8 rounded-full transition-colors ${
+                        className={`inline-flex items-center justify-center w-8 h-8 rounded-full transition-colors relative group ${
                           user.role === ROLES.ADMIN
                             ? 'text-yellow-500 hover:text-yellow-600'
                             : 'text-gray-600 hover:text-gray-800'
                         } ${updateUserRoleLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                        title={user.role === ROLES.ADMIN ? 'Remove admin privileges' : 'Grant admin privileges'}
                       >
                         {user.role === ROLES.ADMIN ? (
                           <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -274,6 +284,10 @@ const Users = () => {
                         ) : (
                           <User className="w-5 h-5" />
                         )}
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                          {user.role === ROLES.ADMIN ? 'Remove admin privileges' : 'Grant admin privileges'}
+                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+                        </div>
                       </button>
                     )}
                   </td>
@@ -323,8 +337,12 @@ const Users = () => {
                     <div className="flex flex-wrap gap-1 justify-center">
                       {/* Self Protection Lock */}
                       {user.id === currentUser?.id && (
-                        <div className="text-gray-400" title="Cannot change your own status">
+                        <div className="text-gray-400 relative group">
                           <Lock className="h-4 w-4" />
+                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                            Cannot change your own status
+                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+                          </div>
                         </div>
                       )}
 
@@ -336,17 +354,23 @@ const Users = () => {
                             <>
                               <button
                                 onClick={() => handleBlockUser(user)}
-                                className="px-2 py-1 text-xs rounded bg-orange-100 text-orange-700 hover:bg-orange-200"
-                                title="Block user"
+                                className="px-2 py-1 text-xs rounded bg-orange-100 text-orange-700 hover:bg-orange-200 relative group"
                               >
                                 Block
+                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                                  Block user
+                                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+                                </div>
                               </button>
                               <button
                                 onClick={() => handleDeleteUser(user)}
-                                className="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700"
-                                title="Delete user"
+                                className="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700 relative group"
                               >
                                 Delete
+                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                                  Delete user
+                                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+                                </div>
                               </button>
                             </>
                           )}
@@ -355,10 +379,13 @@ const Users = () => {
                           {user.state === STATES.TRASHED && (
                             <button
                               onClick={() => handleRestoreUser(user)}
-                              className="px-2 py-1 text-xs rounded bg-green-100 text-green-700 hover:bg-green-200"
-                              title="Restore user"
+                              className="px-2 py-1 text-xs rounded bg-green-100 text-green-700 hover:bg-green-200 relative group"
                             >
                               Restore
+                              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                                Restore user
+                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+                              </div>
                             </button>
                           )}
 
@@ -366,10 +393,13 @@ const Users = () => {
                           {user.state === STATES.BLOCKED && (
                             <button
                               onClick={() => handleBlockUser(user)}
-                              className="px-2 py-1 text-xs rounded bg-green-100 text-green-700 hover:bg-green-200"
-                              title="Unblock user"
+                              className="px-2 py-1 text-xs rounded bg-green-100 text-green-700 hover:bg-green-200 relative group"
                             >
                               Unblock
+                              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                                Unblock user
+                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+                              </div>
                             </button>
                           )}
 
@@ -378,14 +408,17 @@ const Users = () => {
                             <button
                               onClick={() => handleApproveUser(user)}
                               disabled={approveUserMutation.isLoading}
-                              className={`px-2 py-1 text-xs rounded ${
+                              className={`px-2 py-1 text-xs rounded relative group ${
                                 user.is_email_verified 
                                   ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
                                   : 'bg-red-100 text-red-700 hover:bg-red-200'
                               }`}
-                              title={user.is_email_verified ? "Activate user" : "Activate (Email unverified)"}
                             >
                               {approveUserMutation.isLoading ? 'Activating...' : 'Activate'}
+                              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                                {user.is_email_verified ? "Activate user" : "Activate (Email unverified)"}
+                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+                              </div>
                             </button>
                           )}
                         </>
@@ -889,14 +922,17 @@ const Users = () => {
                           <button
                             onClick={() => approveUserMutation.mutate(user.id)}
                             disabled={!user.is_email_verified || approveUserMutation.isLoading}
-                            className={`px-3 py-1 text-sm rounded ${
+                            className={`px-3 py-1 text-sm rounded relative group ${
                               !user.is_email_verified
                                 ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                                 : 'bg-green-100 text-green-700 hover:bg-green-200'
                             }`}
-                            title={!user.is_email_verified ? 'User must verify email first' : 'Approve user'}
                           >
                             {approveUserMutation.isLoading ? 'Approving...' : 'Approve'}
+                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                              {!user.is_email_verified ? 'User must verify email first' : 'Approve user'}
+                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+                            </div>
                           </button>
                         </div>
                       </td>

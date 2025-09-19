@@ -232,25 +232,31 @@ const Teams = () => {
           <div className="flex items-center space-x-2">
             <button
               onClick={() => handleViewModeChange('cards')}
-              className={`p-2 rounded-md ${
+              className={`p-2 rounded-md relative group ${
                 viewMode === 'cards'
                   ? 'bg-primary-100 text-primary-600'
                   : 'text-gray-400 hover:text-gray-600'
               }`}
-              title="Card view"
             >
               <Grid3X3 className="h-5 w-5" />
+              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                Card view
+                <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+              </div>
             </button>
             <button
               onClick={() => handleViewModeChange('table')}
-              className={`p-2 rounded-md ${
+              className={`p-2 rounded-md relative group ${
                 viewMode === 'table'
                   ? 'bg-primary-100 text-primary-600'
                   : 'text-gray-400 hover:text-gray-600'
               }`}
-              title="Table view"
             >
               <List className="h-5 w-5" />
+              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                Table view
+                <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+              </div>
             </button>
           </div>
           <button
@@ -313,14 +319,17 @@ const Teams = () => {
                   <button
                     onClick={() => handleDelete(team.id)}
                     disabled={team.userCount > 0}
-                    className={`${
+                    className={`relative group ${
                       team.userCount > 0 
                         ? 'text-gray-400 cursor-not-allowed' 
                         : 'text-red-600 hover:text-red-800'
                     }`}
-                    title={team.userCount > 0 ? 'Cannot delete team with users' : 'Delete team'}
                   >
                     <Trash2 className="h-4 w-4" />
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                      {team.userCount > 0 ? 'Not Empty' : 'Delete team'}
+                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+                    </div>
                   </button>
                 </div>
               </div>
@@ -416,14 +425,17 @@ const Teams = () => {
                         <button
                           onClick={() => handleDelete(team.id)}
                           disabled={team.userCount > 0}
-                          className={`${
+                          className={`relative group ${
                             team.userCount > 0 
                               ? 'text-gray-400 cursor-not-allowed' 
                               : 'text-red-600 hover:text-red-800'
                           }`}
-                          title={team.userCount > 0 ? 'Cannot delete team with users' : 'Delete team'}
                         >
                           <Trash2 className="h-4 w-4" />
+                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                            {team.userCount > 0 ? 'Not Empty' : 'Delete team'}
+                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+                          </div>
                         </button>
                       </div>
                     </td>
