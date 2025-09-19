@@ -88,10 +88,6 @@ const Credentials = () => {
     }
   );
 
-  const { data: projects } = useQuery('credentials-projects', async () => {
-    const response = await api.get('/projects');
-    return response.data.projects;
-  });
 
   const { data: projectNames } = useQuery('project-names', async () => {
     const response = await api.get('/projects');
@@ -493,7 +489,7 @@ const Credentials = () => {
                           defaultValue=""
                         >
                           <option value="">No Project</option>
-                          {projects?.map((project) => (
+                          {projectNames?.map((project) => (
                             <option key={project.id} value={project.id}>
                               {project.name}
                             </option>
