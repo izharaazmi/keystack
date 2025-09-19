@@ -30,7 +30,7 @@ const Projects = () => {
   }, [searchTerm]);
 
   const { data: projects, isLoading } = useQuery(
-    ['projects'],
+    ['projects-page'],
     async () => {
       const response = await api.get('/projects');
       return response.data.projects;

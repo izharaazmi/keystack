@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
 import Modal from './Modal';
 
+// Role constants
+const ROLES = {
+  USER: 0,
+  ADMIN: 1
+};
+
 const CreateUserModal = ({ 
   isOpen, 
   onClose, 
@@ -13,7 +19,7 @@ const CreateUserModal = ({
     last_name: '',
     email: '',
     password: '',
-    role: 'user'
+    role: ROLES.USER
   });
 
   const handleSubmit = (e) => {
@@ -27,7 +33,7 @@ const CreateUserModal = ({
       last_name: '',
       email: '',
       password: '',
-      role: 'user'
+      role: ROLES.USER
     });
     onClose();
   };
@@ -111,9 +117,9 @@ const CreateUserModal = ({
               <input
                 type="radio"
                 name="role"
-                value="user"
-                checked={formData.role === 'user'}
-                onChange={(e) => handleChange('role', e.target.value)}
+                value={ROLES.USER}
+                checked={formData.role === ROLES.USER}
+                onChange={(e) => handleChange('role', parseInt(e.target.value))}
                 className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300"
               />
               <span className="ml-2 text-sm text-gray-700">User</span>
@@ -122,9 +128,9 @@ const CreateUserModal = ({
               <input
                 type="radio"
                 name="role"
-                value="admin"
-                checked={formData.role === 'admin'}
-                onChange={(e) => handleChange('role', e.target.value)}
+                value={ROLES.ADMIN}
+                checked={formData.role === ROLES.ADMIN}
+                onChange={(e) => handleChange('role', parseInt(e.target.value))}
                 className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300"
               />
               <span className="ml-2 text-sm text-gray-700">Admin</span>

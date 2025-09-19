@@ -12,8 +12,8 @@ const updateUserSchema = Joi.object({
 	first_name: Joi.string().optional(),
 	last_name: Joi.string().optional(),
 	email: Joi.string().email().optional(),
-	role: Joi.string().valid('admin', 'user').optional(),
-	is_active: Joi.boolean().optional()
+	role: Joi.number().integer().min(0).max(10).optional(),
+	state: Joi.number().integer().min(-2).max(10).optional()
 });
 
 // Get all users (admin only)
@@ -22,7 +22,7 @@ router.get('/', adminAuth, async (req, res) => {
     const { 
       search, 
       role, 
-      is_active, 
+      state, 
       team_id, 
       sort_field = 'created_at', 
       sort_direction = 'desc',
@@ -40,24 +40,42 @@ router.get('/', adminAuth, async (req, res) => {
       ];
     }
     
-    if (role) {
-      whereClause.role = role;
+    if (role !== undefined) {
+      whereClause.role = parseInt(role);
     }
     
-    if (is_active !== undefined) {
-      whereClause.is_active = is_active === 'true';
+    if (state !== undefined) {
+      whereClause.state = parseInt(state);
+    } else {
+      // When no state filter is provided, exclude trashed users by default
+      whereClause.state = { [Op.ne]: -2 }; // Exclude TRASHED state
     }
 
     let includeClause = [];
     
     // If team_id is provided, filter users by team membership
     if (team_id) {
+      const teamId = parseInt(team_id, 10);
+      console.log('Team filter in backend:', { team_id, teamId, isValid: !isNaN(teamId) });
+      if (!isNaN(teamId)) {
+        includeClause.push({
+          model: Group,
+          as: 'Groups',
+          through: { attributes: [] },
+          where: { id: teamId },
+          required: true,
+          attributes: ['id', 'name']
+        });
+        console.log('Added team filter to includeClause:', includeClause);
+      }
+    } else {
+      // If no team filter, include Groups for team count
       includeClause.push({
         model: Group,
         as: 'Groups',
         through: { attributes: [] },
-        where: { id: team_id },
-        required: true
+        attributes: ['id', 'name'],
+        required: false
       });
     }
 
@@ -67,7 +85,7 @@ router.get('/', adminAuth, async (req, res) => {
       'last_name': 'last_name',
       'email': 'email',
       'role': 'role',
-      'is_active': 'is_active',
+      'state': 'state',
       'created_at': 'created_at',
       'last_login': 'last_login',
       'team_count': 'team_count'
@@ -101,16 +119,7 @@ router.get('/', adminAuth, async (req, res) => {
     // Get paginated users
     const users = await User.findAll({
       where: whereClause,
-      include: [
-        ...includeClause,
-        {
-          model: Group,
-          as: 'Groups',
-          through: { attributes: [] },
-          attributes: ['id', 'name'],
-          required: false
-        }
-      ],
+      include: includeClause,
       attributes: { exclude: ['password', 'emailVerificationToken'] },
       order: orderClause,
       limit: limitNum,
@@ -118,9 +127,16 @@ router.get('/', adminAuth, async (req, res) => {
     });
 
     // Add team count to each user
-    const usersWithTeamCount = users.map(user => ({
-      ...user.toJSON(),
-      team_count: user.Groups ? user.Groups.length : 0
+    const usersWithTeamCount = await Promise.all(users.map(async (user) => {
+      // Get actual team count for each user (not just the filtered team)
+      const teamCount = await UserGroup.count({
+        where: { userId: user.id }
+      });
+      
+      return {
+        ...user.toJSON(),
+        team_count: teamCount
+      };
     }));
 
     // Calculate pagination info
@@ -151,7 +167,7 @@ router.get('/:id', auth, async (req, res) => {
     const { id } = req.params;
     
     // Users can only view their own profile unless they're admin
-    if (parseInt(id) !== req.user.id && req.user.role !== 'admin') {
+    if (parseInt(id) !== req.user.id && req.user.role !== 1) {
       return res.status(403).json({ message: 'Not authorized to view this user' });
     }
 
@@ -184,14 +200,14 @@ router.put('/:id', auth, async (req, res) => {
     }
 
     // Users can only update their own profile unless they're admin
-    if (parseInt(id) !== req.user.id && req.user.role !== 'admin') {
+    if (parseInt(id) !== req.user.id && req.user.role !== 1) {
       return res.status(403).json({ message: 'Not authorized to update this user' });
     }
 
     // Non-admin users cannot change their role or active status
-    if (req.user.role !== 'admin') {
+    if (req.user.role !== 1) {
       delete value.role;
-      delete value.is_active;
+      delete value.state;
     }
 
     const user = await User.findByPk(id);
@@ -200,11 +216,11 @@ router.put('/:id', auth, async (req, res) => {
     }
 
     // Prevent deactivating the last remaining admin
-    if (value.is_active === false && user.role === 'admin') {
+    if (value.state === -2 && user.role === 1) {
       const activeAdminCount = await User.count({
         where: {
-          role: 'admin',
-          is_active: true
+          role: 1,
+          state: 1
         }
       });
 
@@ -252,11 +268,11 @@ router.patch('/:id/deactivate', adminAuth, async (req, res) => {
     }
 
     // Prevent deactivating the last remaining admin
-    if (user.role === 'admin') {
+    if (user.role === 1) {
       const activeAdminCount = await User.count({
         where: {
-          role: 'admin',
-          is_active: true
+          role: 1,
+          state: 1
         }
       });
 
@@ -267,7 +283,7 @@ router.patch('/:id/deactivate', adminAuth, async (req, res) => {
       }
     }
 
-    await user.update({ is_active: false });
+    await user.update({ state: -2 }); // Set to TRASHED state
 
     res.json({ message: 'User deactivated successfully' });
   } catch (error) {
@@ -286,7 +302,7 @@ router.patch('/:id/activate', adminAuth, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    await user.update({ is_active: true });
+    await user.update({ state: 1 }); // Set to ACTIVE state
 
     res.json({ message: 'User activated successfully' });
   } catch (error) {
@@ -299,12 +315,12 @@ router.patch('/:id/activate', adminAuth, async (req, res) => {
 router.get('/stats/overview', adminAuth, async (req, res) => {
   try {
     const totalUsers = await User.count();
-    const activeUsers = await User.count({ where: { is_active: true } });
+    const activeUsers = await User.count({ where: { state: 1 } });
     const verifiedUsers = await User.count({ where: { is_email_verified: true } });
-    const adminUsers = await User.count({ where: { role: 'admin' } });
+    const adminUsers = await User.count({ where: { role: 1 } });
 
     const recentUsers = await User.findAll({
-      where: { is_active: true },
+      where: { state: 1 },
       attributes: ['first_name', 'last_name', 'email', 'created_at', 'last_login'],
       order: [['created_at', 'DESC']],
       limit: 5
@@ -330,8 +346,8 @@ router.patch('/:id/role', adminAuth, async (req, res) => {
     const { role } = req.body;
 
     // Validate role
-    if (!role || !['admin', 'user'].includes(role)) {
-      return res.status(400).json({ message: 'Invalid role. Must be "admin" or "user"' });
+    if (role === undefined || (role !== 0 && role !== 1)) {
+      return res.status(400).json({ message: 'Invalid role. Must be 0 (user) or 1 (admin)' });
     }
 
     const user = await User.findByPk(id);
@@ -340,8 +356,8 @@ router.patch('/:id/role', adminAuth, async (req, res) => {
     }
 
     // Check if this would leave no admins
-    if (user.role === 'admin' && role === 'user') {
-      const adminCount = await User.count({ where: { role: 'admin' } });
+    if (user.role === 1 && role === 0) {
+      const adminCount = await User.count({ where: { role: 1 } });
       if (adminCount <= 1) {
         return res.status(400).json({ message: 'Cannot change role: At least one admin must remain' });
       }
@@ -362,8 +378,7 @@ router.get('/pending', adminAuth, async (req, res) => {
   try {
     const pendingUsers = await User.findAll({
       where: { 
-        is_active: false,
-        is_email_verified: true // Only show users who have verified their email
+        state: 0
       },
       attributes: { exclude: ['password', 'email_verification_token'] },
       order: [['created_at', 'ASC']]
@@ -386,19 +401,75 @@ router.patch('/:id/approve', adminAuth, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    if (user.is_active) {
+    if (user.state === 1) {
       return res.status(400).json({ message: 'User is already approved' });
     }
 
-    if (!user.is_email_verified) {
-      return res.status(400).json({ message: 'User must verify their email before approval' });
-    }
-
-    await user.update({ is_active: true });
+    await user.update({ state: 1 });
 
     res.json({ message: 'User approved successfully' });
   } catch (error) {
     console.error('Approve user error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Update user state (admin only) - Common endpoint for state changes
+router.patch('/:id/state', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { state } = req.body;
+
+    const user = await User.findByPk(id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Validate state value
+    if (![User.STATES.TRASHED, User.STATES.BLOCKED, User.STATES.PENDING, User.STATES.ACTIVE].includes(state)) {
+      return res.status(400).json({ message: 'Invalid state value' });
+    }
+
+    // Prevent deleting the last remaining admin
+    if (state === User.STATES.TRASHED && user.role === User.ROLES.ADMIN) {
+      const activeAdminCount = await User.count({
+        where: {
+          role: User.ROLES.ADMIN,
+          state: User.STATES.ACTIVE
+        }
+      });
+      if (activeAdminCount <= 1) {
+        return res.status(400).json({ 
+          message: 'Cannot delete the last remaining admin account. At least one admin must remain active.' 
+        });
+      }
+    }
+
+    await user.update({ state });
+
+    // Return appropriate success message based on state
+    let message = 'User state updated successfully';
+    switch (state) {
+      case User.STATES.ACTIVE:
+        message = user.state === User.STATES.BLOCKED ? 'User unblocked successfully' : 
+                  user.state === User.STATES.TRASHED ? 'User restored successfully' : 
+                  'User activated successfully';
+        break;
+      case User.STATES.BLOCKED:
+        message = 'User blocked successfully';
+        break;
+      case User.STATES.TRASHED:
+        message = 'User deleted successfully';
+        break;
+      case User.STATES.PENDING:
+        message = 'User state set to pending';
+        break;
+    }
+
+    res.json({ message });
+  } catch (error) {
+    console.error('Update user state error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

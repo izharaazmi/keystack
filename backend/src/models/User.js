@@ -41,12 +41,21 @@ const User = sequelize.define('User', {
 		allowNull: true
 	},
 	role: {
-		type: DataTypes.ENUM('admin', 'user'),
-		defaultValue: 'user'
+		type: DataTypes.INTEGER,
+		allowNull: false,
+		defaultValue: 0,
+		validate: {
+			min: 0,
+			max: 10
+		}
 	},
-	is_active: {
-		type: DataTypes.BOOLEAN,
-		defaultValue: true
+	state: {
+		type: DataTypes.INTEGER,
+		defaultValue: 0,
+		validate: {
+			min: -2,
+			max: 10
+		}
 	},
 	last_login: {
 		type: DataTypes.DATE,
@@ -78,6 +87,57 @@ User.prototype.comparePassword = async function(candidatePassword) {
 User.prototype.generateEmailVerificationToken = function() {
 	this.emailVerificationToken = crypto.randomBytes(32).toString('hex');
 	return this.emailVerificationToken;
+};
+
+// User state constants
+User.STATES = {
+	TRASHED: -2,    // User is trashed/deleted
+	BLOCKED: -1,    // User is blocked/banned
+	PENDING: 0,     // User is pending approval
+	ACTIVE: 1,      // User is active and approved
+	// Future states can be added here (2, 3, 4, etc.)
+};
+
+// User role constants
+User.ROLES = {
+	USER: 0,        // Regular user
+	ADMIN: 1,       // Administrator
+	// Future roles can be added here (2, 3, 4, etc.)
+};
+
+// Helper methods for state checking
+User.prototype.isTrashed = function() {
+	return this.state === User.STATES.TRASHED;
+};
+
+User.prototype.isBlocked = function() {
+	return this.state === User.STATES.BLOCKED;
+};
+
+User.prototype.isPending = function() {
+	return this.state === User.STATES.PENDING;
+};
+
+User.prototype.isActive = function() {
+	return this.state === User.STATES.ACTIVE;
+};
+
+User.prototype.canLogin = function() {
+	return this.state === User.STATES.ACTIVE;
+};
+
+// Helper methods for role checking
+User.prototype.isUser = function() {
+	return this.role === User.ROLES.USER;
+};
+
+User.prototype.isAdmin = function() {
+	return this.role === User.ROLES.ADMIN;
+};
+
+// Keep role as integer for frontend
+User.prototype.toJSON = function() {
+	return { ...this.dataValues };
 };
 
 export default User;

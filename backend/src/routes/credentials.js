@@ -1,7 +1,7 @@
 import express from 'express';
 import Joi from 'joi';
 import {Op} from 'sequelize';
-import {Credential, User, Group, CredentialUser, CredentialGroup, UserGroup} from '../models/index.js';
+import {Credential, User, Group, Project, CredentialUser, CredentialGroup, UserGroup} from '../models/index.js';
 import {auth, adminAuth} from '../middleware/auth.js';
 import {sequelize} from '../config/database.js';
 
@@ -16,6 +16,7 @@ const credentialSchema = Joi.object({
 	password: Joi.string().required(),
 	description: Joi.string().optional().allow(''),
 	project: Joi.string().optional().allow(''),
+	project_id: Joi.number().integer().positive().optional(),
 	allowedUsers: Joi.array().items(Joi.number().integer().positive()).optional(),
 	allowedGroups: Joi.array().items(Joi.number().integer().positive()).optional()
 });
@@ -62,7 +63,8 @@ router.get('/', auth, async (req, res) => {
     };
 
     if (project) {
-      whereClause.project = project;
+      // If project is provided, filter by project ID
+      whereClause.project_id = project;
     }
 
     if (search) {
@@ -80,7 +82,8 @@ router.get('/', auth, async (req, res) => {
     const credentials = await Credential.findAll({
       where: whereClause,
       include: [
-        { model: User, as: 'createdBy', attributes: ['first_name', 'last_name', 'email'] }
+        { model: User, as: 'createdBy', attributes: ['first_name', 'last_name', 'email'] },
+        { model: Project, as: 'project', attributes: ['id', 'name', 'description'] }
       ],
       order: [['created_at', 'DESC']]
     });
@@ -170,10 +173,27 @@ router.post('/', auth, async (req, res) => {
       return res.status(400).json({ message: error.details[0].message });
     }
 
-    const { allowedUsers, allowedGroups, ...credentialData } = value;
+    const { allowedUsers, allowedGroups, project, project_id, ...credentialData } = value;
+
+    // Handle project assignment - prioritize project_id over project string
+    let finalProjectId = project_id;
+    if (!finalProjectId && project) {
+      // If project string is provided, find or create the project
+      const [projectRecord] = await Project.findOrCreate({
+        where: { name: project },
+        defaults: {
+          name: project,
+          description: `Auto-created project: ${project}`,
+          created_by_id: req.user.id,
+          is_active: true
+        }
+      });
+      finalProjectId = projectRecord.id;
+    }
 
     const credential = await Credential.create({
       ...credentialData,
+      project_id: finalProjectId || null,
       created_by_id: req.user.id
     });
 
@@ -199,7 +219,8 @@ router.post('/', auth, async (req, res) => {
 
     const credentialWithAssociations = await Credential.findByPk(credential.id, {
       include: [
-        { model: User, as: 'createdBy', attributes: ['first_name', 'last_name', 'email'] }
+        { model: User, as: 'createdBy', attributes: ['first_name', 'last_name', 'email'] },
+        { model: Project, as: 'project', attributes: ['id', 'name', 'description'] }
       ]
     });
 
@@ -356,13 +377,14 @@ router.post('/:id/use', auth, async (req, res) => {
 // Get all projects
 router.get('/projects/list', auth, async (req, res) => {
   try {
-    const projects = await Credential.findAll({
+    const projects = await Project.findAll({
       where: { is_active: true },
-      attributes: ['project'],
-      group: ['project']
+      attributes: ['name'],
+      order: [['name', 'ASC']],
+      raw: true
     });
     
-    const projectList = projects.map(p => p.project);
+    const projectList = projects.map(p => p.name);
     res.json({ projects: projectList });
   } catch (error) {
     console.error('Get projects error:', error);
@@ -373,18 +395,31 @@ router.get('/projects/list', auth, async (req, res) => {
 // Get projects with credentials count
 router.get('/projects', auth, async (req, res) => {
   try {
-    const projects = await Credential.findAll({
+    const projects = await Project.findAll({
       where: { is_active: true },
-      attributes: [
-        'project',
-        [sequelize.fn('COUNT', sequelize.col('id')), 'credentialsCount']
+      include: [
+        {
+          model: Credential,
+          as: 'credentials',
+          where: { is_active: true },
+          attributes: [],
+          required: false
+        }
       ],
-      group: ['project'],
-      order: [['project', 'ASC']]
+      attributes: [
+        'id',
+        'name',
+        'description',
+        [sequelize.fn('COUNT', sequelize.col('credentials.id')), 'credentialsCount']
+      ],
+      group: ['Project.id'],
+      order: [['name', 'ASC']]
     });
     
     const projectList = projects.map(p => ({
-      name: p.project,
+      id: p.id,
+      name: p.name,
+      description: p.description,
       credentialsCount: parseInt(p.dataValues.credentialsCount)
     }));
     

@@ -22,8 +22,8 @@ const auth = async (req, res, next) => {
       return res.status(401).json({ message: 'Email not verified' });
     }
 
-    if (!user.is_active) {
-      return res.status(401).json({ message: 'Account is deactivated' });
+    if (user.state !== 1) {
+      return res.status(401).json({ message: 'Account is not active' });
     }
 
     req.user = user;
@@ -37,7 +37,7 @@ const auth = async (req, res, next) => {
 const adminAuth = async (req, res, next) => {
   try {
     await auth(req, res, () => {
-      if (req.user.role !== 'admin') {
+      if (req.user.role !== 1) {
         return res.status(403).json({ message: 'Admin access required' });
       }
       next();

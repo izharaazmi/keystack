@@ -7,8 +7,8 @@ import CredentialUser from './CredentialUser.js';
 import CredentialGroup from './CredentialGroup.js';
 
 // Define associations
-User.belongsToMany(Group, {through: UserGroup, foreignKey: 'userId', otherKey: 'groupId'});
-Group.belongsToMany(User, {through: UserGroup, foreignKey: 'groupId', otherKey: 'userId'});
+User.belongsToMany(Group, {through: UserGroup, foreignKey: 'userId', otherKey: 'groupId', as: 'Groups'});
+Group.belongsToMany(User, {through: UserGroup, foreignKey: 'groupId', otherKey: 'userId', as: 'Users'});
 
 Credential.belongsToMany(User, {through: CredentialUser, foreignKey: 'credentialId', otherKey: 'userId'});
 User.belongsToMany(Credential, {through: CredentialUser, foreignKey: 'userId', otherKey: 'credentialId'});

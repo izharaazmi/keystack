@@ -1,14 +1,30 @@
 import React, {useState, useEffect, useMemo, useCallback} from 'react';
 import {useQuery, useMutation, useQueryClient} from 'react-query';
 import {useSearchParams} from 'react-router-dom';
-import {Search, Shield, UserX, UserCheck, Users as UsersIcon, Plus, ChevronUp, ChevronDown, X} from 'lucide-react';
+import {Search, Shield, Users as UsersIcon, Plus, ChevronUp, ChevronDown, X, Lock, User} from 'lucide-react';
 import {api} from '../utils/api';
 import toast from 'react-hot-toast';
 import Pagination from '../components/Pagination';
 import TeamAssignmentModal from '../components/TeamAssignmentModal';
 import CreateUserModal from '../components/CreateUserModal';
+import {useAuth} from '../contexts/AuthContext';
+
+// Role constants
+const ROLES = {
+  USER: 0,
+  ADMIN: 1
+};
+
+// State constants
+const STATES = {
+  TRASHED: -2,
+  BLOCKED: -1,
+  PENDING: 0,
+  ACTIVE: 1
+};
 
 const Users = () => {
+  const {user: currentUser} = useAuth();
   const [searchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
@@ -85,13 +101,17 @@ const Users = () => {
       const params = new URLSearchParams();
       if (debouncedSearchTerm) params.append('search', debouncedSearchTerm);
       if (roleFilter) params.append('role', roleFilter);
-      if (statusFilter) params.append('is_active', statusFilter);
-      if (teamFilter) params.append('team_id', teamFilter);
+      if (statusFilter) params.append('state', statusFilter);
+      if (teamFilter && teamFilter !== '') {
+        console.log('Team filter processing:', { teamFilter });
+        params.append('team_id', teamFilter);
+      }
       params.append('sort_field', sortField);
       params.append('sort_direction', sortDirection);
       params.append('page', currentPage.toString());
       params.append('limit', pageSize.toString());
       
+      console.log('Users query params:', params.toString()); // Debug log
       const response = await api.get(`/users?${params.toString()}`);
       return response.data;
     },
@@ -105,8 +125,21 @@ const Users = () => {
   const users = useMemo(() => usersData?.users || [], [usersData?.users]);
   const pagination = usersData?.pagination;
 
+  // Debug logging for filter values
+  console.log('Current filter values:', {
+    debouncedSearchTerm,
+    roleFilter,
+    statusFilter,
+    teamFilter,
+    sortField,
+    sortDirection,
+    currentPage,
+    pageSize
+  });
+
   const { data: teams } = useQuery('teams', async () => {
     const response = await api.get('/teams');
+    console.log('Teams loaded:', response.data.groups); // Debug log
     return response.data.groups;
   });
 
@@ -123,8 +156,7 @@ const Users = () => {
     onSelectAll, 
     onSelectUser, 
     onToggleStatus, 
-    onRoleChangeToUser, 
-    onRoleChangeToAdmin, 
+    onRoleChange, 
     updateUserRoleLoading,
     pagination,
     currentPage,
@@ -155,12 +187,13 @@ const Users = () => {
                     className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                   />
                 </th>
+                <SortableHeader field="id" align="center">ID</SortableHeader>
                 <SortableHeader field="first_name">Name</SortableHeader>
                 <SortableHeader field="email">Email</SortableHeader>
-                <SortableHeader field="role" align="center">Role</SortableHeader>
-                <SortableHeader field="is_active" align="center">Status</SortableHeader>
+                <SortableHeader field="role" align="center">Admin</SortableHeader>
+                <SortableHeader field="state" align="center">Status</SortableHeader>
                 <SortableHeader field="team_count" align="center">Teams</SortableHeader>
-                <th className="text-center">Email Verified</th>
+                <SortableHeader field="is_email_verified" align="center">Email Verified</SortableHeader>
                 <SortableHeader field="created_at">Joined</SortableHeader>
                 <SortableHeader field="last_login">Last Login</SortableHeader>
                 <th className="text-center">Actions</th>
@@ -177,26 +210,56 @@ const Users = () => {
                       className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                     />
                   </td>
+                  <td className="text-center text-sm text-gray-500">
+                    {user.id}
+                  </td>
                   <td className="font-medium">
                     {user.first_name} {user.last_name}
                   </td>
                   <td>{user.email}</td>
                   <td className="text-center">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      user.role === 'admin' 
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {user.role}
-                    </span>
+                    {user.id === currentUser?.id ? (
+                      <div className="inline-flex items-center justify-center w-8 h-8 rounded-full text-yellow-500" title="Cannot change your own role">
+                        <Lock className="w-5 h-5" />
+                      </div>
+                    ) : user.state !== STATES.ACTIVE ? (
+                      <div className="inline-flex items-center justify-center w-8 h-8 rounded-full text-gray-400" title="Cannot change role for non-active users">
+                        <Lock className="w-5 h-5" />
+                      </div>
+                    ) : (
+                      <button
+                        onClick={onRoleChange(user)}
+                        disabled={updateUserRoleLoading}
+                        className={`inline-flex items-center justify-center w-8 h-8 rounded-full transition-colors ${
+                          user.role === ROLES.ADMIN
+                            ? 'text-yellow-500 hover:text-yellow-600'
+                            : 'text-gray-600 hover:text-gray-800'
+                        } ${updateUserRoleLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                        title={user.role === ROLES.ADMIN ? 'Remove admin privileges' : 'Grant admin privileges'}
+                      >
+                        {user.role === ROLES.ADMIN ? (
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                          </svg>
+                        ) : (
+                          <User className="w-5 h-5" />
+                        )}
+                      </button>
+                    )}
                   </td>
                   <td className="text-center">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      user.is_active 
+                      user.state === STATES.ACTIVE 
                         ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
+                        : user.state === STATES.PENDING
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : user.state === STATES.BLOCKED
+                        ? 'bg-red-100 text-red-800'
+                        : 'bg-gray-100 text-gray-800'
                     }`}>
-                      {user.is_active ? 'Active' : 'Inactive'}
+                      {user.state === STATES.ACTIVE ? 'Active' : 
+                       user.state === STATES.PENDING ? 'Pending' :
+                       user.state === STATES.BLOCKED ? 'Blocked' : 'Trashed'}
                     </span>
                   </td>
                   <td className="text-center">
@@ -227,48 +290,76 @@ const Users = () => {
                     }
                   </td>
                   <td className="text-center">
-                    <div className="flex space-x-2 justify-center">
-                      <button
-                        onClick={onToggleStatus(user)}
-                        className={`${
-                          user.is_active 
-                            ? 'text-red-600 hover:text-red-800'
-                            : 'text-green-600 hover:text-green-800'
-                        }`}
-                        title={user.is_active ? 'Deactivate user' : 'Activate user'}
-                      >
-                        {user.is_active ? (
-                          <UserX className="h-4 w-4" />
-                        ) : (
-                          <UserCheck className="h-4 w-4" />
-                        )}
-                      </button>
-                      <div className="flex space-x-1">
-                        <button
-                          onClick={onRoleChangeToUser(user.id)}
-                          disabled={user.role === 'user' || updateUserRoleLoading}
-                          className={`px-2 py-1 text-xs rounded ${
-                            user.role === 'user'
-                              ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                              : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                          }`}
-                          title="Change to User role"
-                        >
-                          User
-                        </button>
-                        <button
-                          onClick={onRoleChangeToAdmin(user.id)}
-                          disabled={user.role === 'admin' || updateUserRoleLoading}
-                          className={`px-2 py-1 text-xs rounded ${
-                            user.role === 'admin'
-                              ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                              : 'bg-red-100 text-red-700 hover:bg-red-200'
-                          }`}
-                          title="Change to Admin role"
-                        >
-                          Admin
-                        </button>
-                      </div>
+                    <div className="flex flex-wrap gap-1 justify-center">
+                      {/* Self Protection Lock */}
+                      {user.id === currentUser?.id && (
+                        <div className="text-gray-400" title="Cannot change your own status">
+                          <Lock className="h-4 w-4" />
+                        </div>
+                      )}
+
+                      {/* Actions for other users */}
+                      {user.id !== currentUser?.id && (
+                        <>
+                          {/* Active State Actions */}
+                          {user.state === STATES.ACTIVE && (
+                            <>
+                              <button
+                                onClick={() => handleBlockUser(user)}
+                                className="px-2 py-1 text-xs rounded bg-orange-100 text-orange-700 hover:bg-orange-200"
+                                title="Block user"
+                              >
+                                Block
+                              </button>
+                              <button
+                                onClick={() => handleDeleteUser(user)}
+                                className="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700"
+                                title="Delete user"
+                              >
+                                Delete
+                              </button>
+                            </>
+                          )}
+
+                          {/* Trashed State Actions */}
+                          {user.state === STATES.TRASHED && (
+                            <button
+                              onClick={() => handleRestoreUser(user)}
+                              className="px-2 py-1 text-xs rounded bg-green-100 text-green-700 hover:bg-green-200"
+                              title="Restore user"
+                            >
+                              Restore
+                            </button>
+                          )}
+
+                          {/* Blocked State Actions */}
+                          {user.state === STATES.BLOCKED && (
+                            <button
+                              onClick={() => handleBlockUser(user)}
+                              className="px-2 py-1 text-xs rounded bg-green-100 text-green-700 hover:bg-green-200"
+                              title="Unblock user"
+                            >
+                              Unblock
+                            </button>
+                          )}
+
+                          {/* Pending State Actions */}
+                          {user.state === STATES.PENDING && (
+                            <button
+                              onClick={() => handleApproveUser(user)}
+                              disabled={approveUserMutation.isLoading}
+                              className={`px-2 py-1 text-xs rounded ${
+                                user.is_email_verified 
+                                  ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                                  : 'bg-red-100 text-red-700 hover:bg-red-200'
+                              }`}
+                              title={user.is_email_verified ? "Activate user" : "Activate (Email unverified)"}
+                            >
+                              {approveUserMutation.isLoading ? 'Activating...' : 'Activate'}
+                            </button>
+                          )}
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -377,10 +468,24 @@ const Users = () => {
     }
   );
 
+  const updateUserStateMutation = useMutation(
+    ({ id, state }) => api.patch(`/users/${id}/state`, { state }),
+    {
+      onSuccess: (response) => {
+        queryClient.invalidateQueries('users');
+        queryClient.invalidateQueries('pendingUsers');
+        toast.success(response.data.message || 'User state updated successfully');
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.message || 'Failed to update user state');
+      }
+    }
+  );
+
   const handleToggleStatus = useCallback((user) => {
-    if (user.is_active) {
+    if (user.state === STATES.ACTIVE) {
       deactivateMutation.mutate(user.id);
-    } else {
+    } else if (user.state === STATES.TRASHED) {
       activateMutation.mutate(user.id);
     }
   }, [deactivateMutation, activateMutation]);
@@ -419,8 +524,8 @@ const Users = () => {
 
   const handleRoleChange = useCallback((userId, newRole) => {
     // Check if this would leave no admins
-    const currentAdmins = users.filter(user => user.role === 'admin' && user.id !== userId);
-    if (newRole === 'user' && currentAdmins.length === 0) {
+    const currentAdmins = users.filter(user => user.role === ROLES.ADMIN && user.id !== userId);
+    if (newRole === ROLES.USER && currentAdmins.length === 0) {
       toast.error('Cannot change role: At least one admin must remain');
       return;
     }
@@ -433,17 +538,23 @@ const Users = () => {
   }, []);
 
   const handleRoleFilterChange = useCallback((e) => {
-    setRoleFilter(e.target.value);
+    const value = e.target.value;
+    console.log('Role filter changed:', value); // Debug log
+    setRoleFilter(value);
     setCurrentPage(1);
   }, []);
 
   const handleStatusFilterChange = useCallback((e) => {
-    setStatusFilter(e.target.value);
+    const value = e.target.value;
+    console.log('Status filter changed:', value); // Debug log
+    setStatusFilter(value);
     setCurrentPage(1);
   }, []);
 
   const handleTeamFilterChange = useCallback((e) => {
-    setTeamFilter(e.target.value);
+    const value = e.target.value;
+    console.log('Team filter changed:', value, 'Type:', typeof value); // Debug log
+    setTeamFilter(value);
     setCurrentPage(1);
   }, []);
 
@@ -451,17 +562,33 @@ const Users = () => {
     return () => handleToggleStatus(user);
   }, [handleToggleStatus]);
 
-  const handleUserRoleChangeToUser = useCallback((userId) => {
-    return () => handleRoleChange(userId, 'user');
-  }, [handleRoleChange]);
-
-  const handleUserRoleChangeToAdmin = useCallback((userId) => {
-    return () => handleRoleChange(userId, 'admin');
+  const handleUserRoleChange = useCallback((user) => {
+    return () => {
+      const newRole = user.role === ROLES.ADMIN ? ROLES.USER : ROLES.ADMIN;
+      handleRoleChange(user.id, newRole);
+    };
   }, [handleRoleChange]);
 
   const handleUserSelect = useCallback((userId) => {
     return () => handleSelectUser(userId);
   }, [handleSelectUser]);
+
+  const handleBlockUser = useCallback((user) => {
+    const newState = user.state === STATES.BLOCKED ? STATES.ACTIVE : STATES.BLOCKED;
+    updateUserStateMutation.mutate({ id: user.id, state: newState });
+  }, [updateUserStateMutation]);
+
+  const handleApproveUser = useCallback((user) => {
+    approveUserMutation.mutate(user.id);
+  }, [approveUserMutation]);
+
+  const handleDeleteUser = useCallback((user) => {
+    updateUserStateMutation.mutate({ id: user.id, state: STATES.TRASHED });
+  }, [updateUserStateMutation]);
+
+  const handleRestoreUser = useCallback((user) => {
+    updateUserStateMutation.mutate({ id: user.id, state: STATES.ACTIVE });
+  }, [updateUserStateMutation]);
 
 
   return (
@@ -496,35 +623,37 @@ const Users = () => {
             />
           </div>
         </div>
-        <div className="sm:w-32">
+        <div className="sm:w-40">
           <select
             value={roleFilter}
             onChange={handleRoleFilterChange}
-            className="input"
+            className="input w-full text-base"
           >
-            <option value="">All Roles</option>
-            <option value="admin">Admin</option>
-            <option value="user">User</option>
-          </select>
-        </div>
-        <div className="sm:w-32">
-          <select
-            value={statusFilter}
-            onChange={handleStatusFilterChange}
-            className="input"
-          >
-            <option value="">All Status</option>
-            <option value="true">Active</option>
-            <option value="false">Inactive</option>
+            <option value="">(Roles)</option>
+            <option value={ROLES.ADMIN}>Admin</option>
+            <option value={ROLES.USER}>User</option>
           </select>
         </div>
         <div className="sm:w-40">
           <select
+            value={statusFilter}
+            onChange={handleStatusFilterChange}
+            className="input w-full text-base"
+          >
+            <option value="">(Status)</option>
+            <option value={STATES.ACTIVE}>Active</option>
+            <option value={STATES.PENDING}>Pending</option>
+            <option value={STATES.BLOCKED}>Blocked</option>
+            <option value={STATES.TRASHED}>Trashed</option>
+          </select>
+        </div>
+        <div className="sm:w-64">
+          <select
             value={teamFilter}
             onChange={handleTeamFilterChange}
-            className="input"
+            className="input w-full text-base"
           >
-            <option value="">All Teams</option>
+            <option value="">(Team)</option>
             {teams?.map((team) => (
               <option key={team.id} value={team.id}>
                 {team.name}
@@ -544,7 +673,7 @@ const Users = () => {
               </span>
               <button
                 onClick={() => setShowTeamModal(true)}
-                className="btn btn-primary btn-sm"
+                className="btn btn-primary btn-sm flex items-center"
                 disabled={batchAssignMutation.isLoading}
               >
                 <UsersIcon className="h-4 w-4 mr-2" />
@@ -552,7 +681,7 @@ const Users = () => {
               </button>
               <button
                 onClick={() => setSelectedUsers([])}
-                className="btn btn-secondary btn-sm"
+                className="btn btn-secondary btn-sm flex items-center"
               >
                 <X className="h-4 w-4 mr-2" />
                 Clear Selection
@@ -570,8 +699,7 @@ const Users = () => {
         onSelectAll={handleSelectAll}
         onSelectUser={handleUserSelect}
         onToggleStatus={handleUserToggleStatus}
-        onRoleChangeToUser={handleUserRoleChangeToUser}
-        onRoleChangeToAdmin={handleUserRoleChangeToAdmin}
+        onRoleChange={handleUserRoleChange}
         updateUserRoleLoading={updateUserRoleMutation.isLoading}
         pagination={pagination}
         currentPage={currentPage}
@@ -608,7 +736,7 @@ const Users = () => {
                   <tr>
                     <th>Name</th>
                     <th>Email</th>
-                    <th>Role</th>
+                    <th>Admin</th>
                     <th>Email Verified</th>
                     <th>Registered</th>
                     <th>Actions</th>

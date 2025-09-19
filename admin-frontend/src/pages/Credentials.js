@@ -49,8 +49,13 @@ const Credentials = () => {
     }
   );
 
-  const { data: projects } = useQuery('projects', async () => {
-    const response = await api.get('/credentials/projects/list');
+  const { data: projects } = useQuery('credentials-projects', async () => {
+    const response = await api.get('/projects');
+    return response.data.projects;
+  });
+
+  const { data: projectNames } = useQuery('project-names', async () => {
+    const response = await api.get('/projects');
     return response.data.projects;
   });
 
@@ -65,7 +70,7 @@ const Credentials = () => {
         credential.label.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
         credential.url.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
         credential.username.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-        (credential.project && credential.project.toLowerCase().includes(debouncedSearchTerm.toLowerCase()))
+        (credential.project && credential.project.name && credential.project.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()))
       );
     }
     
@@ -131,10 +136,23 @@ const Credentials = () => {
   );
 
   const onSubmit = (data) => {
+    // Handle project assignment
+    const submitData = { ...data };
+    
+    if (projectInputMode === 'input' && data.project_name) {
+      // If creating a new project, we'll let the backend handle it
+      // For now, we'll just send the project name and let the backend create it
+      submitData.project = data.project_name;
+      delete submitData.project_name;
+    } else if (data.project_id) {
+      // If selecting existing project, use project_id
+      submitData.project_id = parseInt(data.project_id);
+    }
+    
     if (editingCredential) {
-      updateMutation.mutate({ id: editingCredential.id, data });
+      updateMutation.mutate({ id: editingCredential.id, data: submitData });
     } else {
-      createMutation.mutate(data);
+      createMutation.mutate(submitData);
     }
   };
 
@@ -147,10 +165,10 @@ const Credentials = () => {
       username: credential.username,
       password: credential.password,
       description: credential.description || '',
-      project: credential.project || '',
+      project_id: credential.project?.id || '',
     });
     // Set project input mode based on whether the project exists in the list
-    const projectExists = projects?.includes(credential.project || 'default');
+    const projectExists = projects?.some(p => p.id === credential.project?.id);
     setProjectInputMode(projectExists ? 'select' : 'input');
     setShowModal(true);
   };
@@ -226,16 +244,16 @@ const Credentials = () => {
             />
           </div>
         </div>
-        <div className="sm:w-48">
+        <div className="sm:w-64">
           <select
             value={selectedProject}
             onChange={(e) => setSelectedProject(e.target.value)}
-            className="input"
+            className="input w-full"
           >
             <option value="">All Projects</option>
-            {projects?.map((project) => (
-              <option key={project} value={project}>
-                {project}
+            {projectNames?.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.name}
               </option>
             ))}
           </select>
@@ -294,7 +312,7 @@ const Credentials = () => {
                   </td>
                   <td>
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
-                      {credential.project}
+                      {credential.project?.name || 'No Project'}
                     </span>
                   </td>
                   <td className="text-center">
@@ -406,20 +424,20 @@ const Credentials = () => {
                       <div className="mt-1 flex rounded-md shadow-sm">
                         {projectInputMode === 'select' ? (
                           <select
-                            {...register('project')}
-                            className="input rounded-r-none"
-                            defaultValue="default"
+                            {...register('project_id')}
+                            className="input rounded-r-none w-full min-w-64"
+                            defaultValue=""
                           >
-                            <option value="default">default</option>
+                            <option value="">No Project</option>
                             {projects?.map((project) => (
-                              <option key={project} value={project}>
-                                {project}
+                              <option key={project.id} value={project.id}>
+                                {project.name}
                               </option>
                             ))}
                           </select>
                         ) : (
                           <input
-                            {...register('project')}
+                            {...register('project_name')}
                             className="input rounded-r-none"
                             placeholder="Enter new project name"
                           />

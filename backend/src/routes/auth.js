@@ -57,9 +57,9 @@ router.post('/register', async (req, res) => {
       password,
       first_name,
       last_name,
-      role: assignedRole,
+      role: assignedRole === 'admin' ? 1 : 0,
       is_email_verified: isFirstUser, // Skip email verification for first user
-      is_active: isFirstUser // First user is automatically active, others need approval
+      state: isFirstUser ? 1 : 0 // First user is automatically active, others need approval
     });
 
     // Generate email verification token
@@ -120,12 +120,12 @@ router.post('/login', async (req, res) => {
     }
 
     // Check if account is active
-    if (!user.is_active) {
-      return res.status(400).json({ message: 'Account is deactivated' });
+    if (user.state !== 1) {
+      return res.status(400).json({ message: 'Account is not active' });
     }
 
     // Only allow admin users to login to backend
-    if (user.role !== 'admin') {
+    if (user.role !== 1) {
       return res.status(403).json({ message: 'Access denied. Only administrators can access the admin dashboard. Please use the Chrome extension to access your credentials.' });
     }
 
@@ -185,7 +185,7 @@ router.post('/extension-login', async (req, res) => {
     }
 
     // Check if account is active
-    if (!user.is_active) {
+    if (user.state !== 1) {
       return res.status(400).json({ message: 'Account is pending admin approval' });
     }
 
@@ -215,7 +215,7 @@ router.post('/extension-login', async (req, res) => {
         first_name: user.first_name,
         last_name: user.last_name,
         role: user.role,
-        is_active: user.is_active
+        state: user.state
       }
     });
   } catch (error) {
