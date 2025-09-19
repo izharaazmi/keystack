@@ -28,8 +28,8 @@ const Credentials = () => {
   const [showPasswords, setShowPasswords] = useState({});
   const [showAssignmentModal, setShowAssignmentModal] = useState(false);
   const [selectedCredential, setSelectedCredential] = useState(null);
-  const [localAssignedUsers, setLocalAssignedUsers] = useState([]);
-  const [localAssignedTeams, setLocalAssignedTeams] = useState([]);
+  const [assignedUsers, setAssignedUsers] = useState([]);
+  const [assignedTeams, setAssignedTeams] = useState([]);
   const [sortField, setSortField] = useState('id');
   const [sortDirection, setSortDirection] = useState('asc');
   const queryClient = useQueryClient();
@@ -140,8 +140,8 @@ const Credentials = () => {
     return filtered;
   }, [credentials, debouncedSearchTerm, sortField, sortDirection]);
 
-  const { data: assignedUsers, isLoading: assignedUsersLoading } = useQuery(
-    ['assignedUsers', selectedCredential?.id],
+  const { data: credentialUsers, isLoading: assignedUsersLoading } = useQuery(
+    ['credential-users', selectedCredential?.id],
     async () => {
       if (!selectedCredential?.id) return [];
       const response = await api.get(`/credentials/${selectedCredential.id}/users`);
@@ -153,8 +153,8 @@ const Credentials = () => {
   );
 
   // Fetch assigned teams for selected credential
-  const { data: assignedTeams } = useQuery(
-    ['assignedTeams', selectedCredential?.id],
+  const { data: credentialTeams } = useQuery(
+    ['credential-teams', selectedCredential?.id],
     async () => {
       if (!selectedCredential?.id) return [];
       const response = await api.get(`/credentials/${selectedCredential.id}/teams`);
@@ -167,12 +167,12 @@ const Credentials = () => {
 
   // Update assigned users and teams when data changes
   useEffect(() => {
-    if (assignedUsers) setLocalAssignedUsers(assignedUsers);
-  }, [assignedUsers]);
+    if (credentialUsers) setAssignedUsers(credentialUsers);
+  }, [credentialUsers]);
 
   useEffect(() => {
-    if (assignedTeams) setLocalAssignedTeams(assignedTeams);
-  }, [assignedTeams]);
+    if (credentialTeams) setAssignedTeams(credentialTeams);
+  }, [credentialTeams]);
 
 
 
@@ -569,8 +569,8 @@ const Credentials = () => {
         type="credential"
         itemId={selectedCredential?.id}
         itemName={selectedCredential?.label}
-        assignedUsers={localAssignedUsers}
-        assignedTeams={localAssignedTeams}
+        assignedUsers={assignedUsers}
+        assignedTeams={assignedTeams}
       />
     </div>
   );

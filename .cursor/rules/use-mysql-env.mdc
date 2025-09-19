@@ -1,0 +1,6 @@
+---
+description: Use mysql in this project and credentials from /backend/.env
+globs: mysql, .env
+alwaysApply: true
+---
+Use mysql in this project and credentials from /backend/.env

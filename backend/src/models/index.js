@@ -40,6 +40,19 @@ User.belongsToMany(Project, {through: ProjectUser, foreignKey: 'user_id', otherK
 Project.belongsToMany(Group, {through: ProjectGroup, foreignKey: 'project_id', otherKey: 'group_id', as: 'Groups'});
 Group.belongsToMany(Project, {through: ProjectGroup, foreignKey: 'group_id', otherKey: 'project_id', as: 'Projects'});
 
+// Add associations for junction tables
+ProjectUser.belongsTo(User, {foreignKey: 'user_id', as: 'User'});
+ProjectUser.belongsTo(Project, {foreignKey: 'project_id', as: 'Project'});
+
+ProjectGroup.belongsTo(Group, {foreignKey: 'group_id', as: 'Group'});
+ProjectGroup.belongsTo(Project, {foreignKey: 'project_id', as: 'Project'});
+
+CredentialUser.belongsTo(User, {foreignKey: 'userId', as: 'User'});
+CredentialUser.belongsTo(Credential, {foreignKey: 'credentialId', as: 'Credential'});
+
+CredentialGroup.belongsTo(Group, {foreignKey: 'groupId', as: 'Group'});
+CredentialGroup.belongsTo(Credential, {foreignKey: 'credentialId', as: 'Credential'});
+
 export {
 	User,
 	Credential,

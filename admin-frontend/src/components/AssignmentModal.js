@@ -49,15 +49,24 @@ const AssignmentModal = ({
     { enabled: isOpen }
   );
 
+  // Filter out already assigned users and teams, then apply search filter
+  const availableUsers = allUsers.filter(user =>
+    !assignedUsers.some(assigned => assigned.id === user.id)
+  );
+
+  const availableTeams = allTeams.filter(team =>
+    !assignedTeams.some(assigned => assigned.id === team.id)
+  );
+
   // Filter users based on search term
-  const filteredUsers = allUsers.filter(user =>
+  const filteredUsers = availableUsers.filter(user =>
     user.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Filter teams based on search term
-  const filteredTeams = allTeams.filter(team =>
+  const filteredTeams = availableTeams.filter(team =>
     team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (team.description && team.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
@@ -248,9 +257,6 @@ const AssignmentModal = ({
                 </h4>
                 <div className="border border-gray-200 rounded-lg max-h-96 overflow-y-auto">
                   {(selectedTab === 'users' ? filteredUsers : filteredTeams).map((item) => {
-                    const isAssigned = selectedTab === 'users' 
-                      ? assignedUsers.some(u => u.id === item.id)
-                      : assignedTeams.some(t => t.id === item.id);
                     const isSelected = selectedTab === 'users'
                       ? selectedUsers.some(u => u.id === item.id)
                       : selectedTeams.some(t => t.id === item.id);
@@ -259,9 +265,9 @@ const AssignmentModal = ({
                       <div
                         key={item.id}
                         className={`p-3 border-b border-gray-100 last:border-b-0 cursor-pointer hover:bg-gray-50 ${
-                          isAssigned ? 'bg-gray-100 opacity-60' : ''
-                        } ${isSelected ? 'bg-primary-50' : ''}`}
-                        onClick={() => !isAssigned && (selectedTab === 'users' ? handleUserSelect(item) : handleTeamSelect(item))}
+                          isSelected ? 'bg-primary-50' : ''
+                        }`}
+                        onClick={() => selectedTab === 'users' ? handleUserSelect(item) : handleTeamSelect(item)}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
@@ -288,10 +294,7 @@ const AssignmentModal = ({
                             </div>
                           </div>
                           <div className="flex items-center space-x-2">
-                            {isAssigned && (
-                              <span className="text-xs text-gray-500">Already assigned</span>
-                            )}
-                            {isSelected && !isAssigned && (
+                            {isSelected && (
                               <Check className="h-4 w-4 text-primary-600" />
                             )}
                           </div>

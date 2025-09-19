@@ -440,7 +440,7 @@ router.get('/:id/users', auth, async (req, res) => {
     const credentialUsers = await CredentialUser.findAll({
       where: { credentialId: id },
       include: [
-        { model: User, attributes: ['id', 'first_name', 'last_name', 'email'] }
+        { model: User, as: 'User', attributes: ['id', 'first_name', 'last_name', 'email'] }
       ]
     });
 
@@ -450,9 +450,11 @@ router.get('/:id/users', auth, async (req, res) => {
       include: [
         { 
           model: Group, 
+          as: 'Group',
           include: [
             { 
               model: User, 
+              as: 'Users',
               through: { attributes: [] },
               attributes: ['id', 'first_name', 'last_name', 'email']
             }
@@ -513,7 +515,7 @@ router.get('/:id/teams', auth, async (req, res) => {
     const credentialGroups = await CredentialGroup.findAll({
       where: { credentialId: id },
       include: [
-        { model: Group, attributes: ['id', 'name', 'description'] }
+        { model: Group, as: 'Group', attributes: ['id', 'name', 'description'] }
       ]
     });
 
