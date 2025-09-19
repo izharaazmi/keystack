@@ -7,9 +7,12 @@ import {
 	Grid3X3,
 	List,
 	ChevronUp,
-	ChevronDown
+	ChevronDown,
+	Users,
+	Settings
 } from 'lucide-react';
 import {api} from '../utils/api';
+import AssignmentModal from '../components/AssignmentModal';
 
 const Projects = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -19,6 +22,12 @@ const Projects = () => {
   });
   const [sortField, setSortField] = useState('name');
   const [sortDirection, setSortDirection] = useState('asc');
+  const [showAssignmentModal, setShowAssignmentModal] = useState(false);
+  const [selectedProject, setSelectedProject] = useState(null);
+  const [assignedUsers, setAssignedUsers] = useState([]);
+  const [assignedTeams, setAssignedTeams] = useState([]);
+  const [projectStats, setProjectStats] = useState({});
+  const [statsLoading, setStatsLoading] = useState(false);
 
   // Debounce search term to prevent excessive filtering
   useEffect(() => {
@@ -37,6 +46,67 @@ const Projects = () => {
     }
   );
 
+  // Fetch assigned users for selected project
+  const { data: projectUsers } = useQuery(
+    ['project-users', selectedProject?.id],
+    async () => {
+      if (!selectedProject?.id) return [];
+      const response = await api.get(`/projects/${selectedProject.id}/users`);
+      return response.data.users;
+    },
+    { enabled: !!selectedProject?.id }
+  );
+
+  // Fetch assigned teams for selected project
+  const { data: projectTeams } = useQuery(
+    ['project-teams', selectedProject?.id],
+    async () => {
+      if (!selectedProject?.id) return [];
+      const response = await api.get(`/projects/${selectedProject.id}/teams`);
+      return response.data.teams;
+    },
+    { enabled: !!selectedProject?.id }
+  );
+
+  // Update assigned users and teams when data changes
+  useEffect(() => {
+    if (projectUsers) setAssignedUsers(projectUsers);
+  }, [projectUsers]);
+
+  useEffect(() => {
+    if (projectTeams) setAssignedTeams(projectTeams);
+  }, [projectTeams]);
+
+  // Fetch user and team counts for all projects
+  const fetchProjectStats = async () => {
+    if (!projects) return;
+    
+    setStatsLoading(true);
+    const stats = {};
+    for (const project of projects) {
+      try {
+        const [usersResponse, teamsResponse] = await Promise.all([
+          api.get(`/projects/${project.id}/users`),
+          api.get(`/projects/${project.id}/teams`)
+        ]);
+        
+        stats[project.id] = {
+          userCount: usersResponse.data.users.length,
+          teamCount: teamsResponse.data.teams.length
+        };
+      } catch (error) {
+        console.error(`Error fetching stats for project ${project.id}:`, error);
+        stats[project.id] = { userCount: 0, teamCount: 0 };
+      }
+    }
+    setProjectStats(stats);
+    setStatsLoading(false);
+  };
+
+  useEffect(() => {
+    fetchProjectStats();
+  }, [projects]);
+
   const handleSort = useCallback((field) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -49,6 +119,17 @@ const Projects = () => {
   const handleViewModeChange = (mode) => {
     setViewMode(mode);
     localStorage.setItem('projects-viewMode', mode);
+  };
+
+  const handleManageAccess = (project) => {
+    setSelectedProject(project);
+    setShowAssignmentModal(true);
+  };
+
+  const handleAssignmentModalClose = () => {
+    setShowAssignmentModal(false);
+    // Refresh project stats when modal closes
+    fetchProjectStats();
   };
 
   const SortableHeader = useCallback(({ field, children, align = 'left' }) => {
@@ -81,7 +162,10 @@ const Projects = () => {
     filtered.sort((a, b) => {
       let aValue, bValue;
       
-      if (sortField === 'name') {
+      if (sortField === 'id') {
+        aValue = parseInt(a.id) || 0;
+        bValue = parseInt(b.id) || 0;
+      } else if (sortField === 'name') {
         aValue = a.name.toLowerCase();
         bValue = b.name.toLowerCase();
       } else if (sortField === 'credentialCount') {
@@ -178,11 +262,17 @@ const Projects = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <Key className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm text-gray-600">Credentials</span>
+                  <span className="text-sm text-gray-600">
+                    {project.credentialsCount} {project.credentialsCount === 1 ? 'credential' : 'credentials'}
+                  </span>
                 </div>
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
-                  {project.credentialsCount}
-                </span>
+                <button
+                  onClick={() => handleManageAccess(project)}
+                  className="text-blue-600 hover:text-blue-800"
+                  title="Manage user and team access"
+                >
+                  <Users className="h-4 w-4" />
+                </button>
               </div>
             </div>
           ))}
@@ -193,13 +283,20 @@ const Projects = () => {
             <table className="table">
               <thead>
                 <tr>
+                  <SortableHeader field="id" align="center">ID</SortableHeader>
                   <SortableHeader field="name">Project</SortableHeader>
                   <SortableHeader field="credentialCount" align="center">Credentials</SortableHeader>
+                  <th className="text-center">Users</th>
+                  <th className="text-center">Teams</th>
+                  <th className="text-center">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredProjects?.map((project) => (
-                  <tr key={project.name}>
+                  <tr key={project.id || project.name}>
+                    <td className="text-center text-sm text-gray-500">
+                      {project.id}
+                    </td>
                     <td>
                       <div className="flex items-center space-x-3">
                         <div className="flex-shrink-0">
@@ -216,10 +313,37 @@ const Projects = () => {
                     <td className="text-center">
                       <div className="flex items-center space-x-2 justify-center">
                         <Key className="h-4 w-4 text-gray-400" />
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
-                          {project.credentialsCount}
+                        <span className="text-sm text-gray-600">
+                          {project.credentialsCount} {project.credentialsCount <= 1 ? 'credential' : 'credentials'}
                         </span>
                       </div>
+                    </td>
+                    <td className="text-center">
+                      {statsLoading ? (
+                        <div className="animate-pulse bg-gray-200 h-4 w-16 mx-auto rounded"></div>
+                      ) : (
+                        <span className="text-sm text-gray-600">
+                          {projectStats[project.id]?.userCount || 0} {projectStats[project.id]?.userCount === 1 ? 'user' : 'users'}
+                        </span>
+                      )}
+                    </td>
+                    <td className="text-center">
+                      {statsLoading ? (
+                        <div className="animate-pulse bg-gray-200 h-4 w-16 mx-auto rounded"></div>
+                      ) : (
+                        <span className="text-sm text-gray-600">
+                          {projectStats[project.id]?.teamCount || 0} {projectStats[project.id]?.teamCount === 1 ? 'team' : 'teams'}
+                        </span>
+                      )}
+                    </td>
+                    <td className="text-center">
+                      <button
+                        onClick={() => handleManageAccess(project)}
+                        className="text-blue-600 hover:text-blue-800"
+                        title="Manage user and team access"
+                      >
+                        <Users className="h-4 w-4" />
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -243,6 +367,17 @@ const Projects = () => {
           </p>
         </div>
       )}
+
+      {/* Assignment Modal */}
+      <AssignmentModal
+        isOpen={showAssignmentModal}
+        onClose={handleAssignmentModalClose}
+        type="project"
+        itemId={selectedProject?.id}
+        itemName={selectedProject?.name}
+        assignedUsers={assignedUsers}
+        assignedTeams={assignedTeams}
+      />
     </div>
   );
 };

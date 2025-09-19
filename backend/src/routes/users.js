@@ -83,6 +83,7 @@ router.get('/', adminAuth, async (req, res) => {
 
     // Define valid sort fields and their database column mappings
     const validSortFields = {
+      'id': 'id',
       'first_name': 'first_name',
       'last_name': 'last_name',
       'email': 'email',

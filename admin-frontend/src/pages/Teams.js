@@ -96,7 +96,10 @@ const Teams = () => {
     filtered.sort((a, b) => {
       let aValue, bValue;
       
-      if (sortField === 'name') {
+      if (sortField === 'id') {
+        aValue = parseInt(a.id) || 0;
+        bValue = parseInt(b.id) || 0;
+      } else if (sortField === 'name') {
         aValue = a.name.toLowerCase();
         bValue = b.name.toLowerCase();
       } else if (sortField === 'userCount') {
@@ -351,6 +354,7 @@ const Teams = () => {
             <table className="table">
               <thead>
                 <tr>
+                  <SortableHeader field="id" align="center">ID</SortableHeader>
                   <SortableHeader field="name">Team</SortableHeader>
                   <th>Description</th>
                   <SortableHeader field="userCount" align="center">Members</SortableHeader>
@@ -360,6 +364,9 @@ const Teams = () => {
               <tbody>
                 {filteredTeams?.map((team) => (
                   <tr key={team.id}>
+                    <td className="text-center text-sm text-gray-500">
+                      {team.id}
+                    </td>
                     <td>
                       <div className="flex items-center space-x-3">
                         <div className="flex-shrink-0">

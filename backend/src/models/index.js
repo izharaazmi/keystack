@@ -5,6 +5,8 @@ import Project from './Project.js';
 import UserGroup from './UserGroup.js';
 import CredentialUser from './CredentialUser.js';
 import CredentialGroup from './CredentialGroup.js';
+import ProjectUser from './ProjectUser.js';
+import ProjectGroup from './ProjectGroup.js';
 
 // Define associations
 User.belongsToMany(Group, {through: UserGroup, foreignKey: 'userId', otherKey: 'groupId', as: 'Groups'});
@@ -30,6 +32,14 @@ Project.belongsTo(User, {foreignKey: 'created_by_id', as: 'createdBy'});
 Project.hasMany(Credential, {foreignKey: 'project_id', as: 'credentials'});
 Credential.belongsTo(Project, {foreignKey: 'project_id', as: 'project'});
 
+// Project-User associations
+Project.belongsToMany(User, {through: ProjectUser, foreignKey: 'project_id', otherKey: 'user_id', as: 'Users'});
+User.belongsToMany(Project, {through: ProjectUser, foreignKey: 'user_id', otherKey: 'project_id', as: 'Projects'});
+
+// Project-Group associations
+Project.belongsToMany(Group, {through: ProjectGroup, foreignKey: 'project_id', otherKey: 'group_id', as: 'Groups'});
+Group.belongsToMany(Project, {through: ProjectGroup, foreignKey: 'group_id', otherKey: 'project_id', as: 'Projects'});
+
 export {
 	User,
 	Credential,
@@ -37,5 +47,7 @@ export {
 	Project,
 	UserGroup,
 	CredentialUser,
-	CredentialGroup
+	CredentialGroup,
+	ProjectUser,
+	ProjectGroup
 };
