@@ -1,8 +1,8 @@
-# 🔐 Chrome Pass
+# 🔐 Team Credential Hub
 
 > **A secure password sharing and autofill system for teams**
 
-Chrome Pass is a comprehensive solution for secure password sharing within teams, featuring a robust backend API, intuitive admin dashboard, and seamless Chrome extension integration.
+Team Credential Hub (formerly Chrome Pass) is a comprehensive solution for secure password sharing within teams, featuring a robust backend API, intuitive admin dashboard, and seamless Chrome extension integration.
 
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
 [![React](https://img.shields.io/badge/React-18.2-blue.svg)](https://reactjs.org/)
@@ -13,8 +13,8 @@ Chrome Pass is a comprehensive solution for secure password sharing within teams
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/yourusername/chrome-pass.git
-cd chrome-pass
+git clone https://github.com/izharaazmi/team-credential-hub.git
+cd team-credential-hub
 
 # 2. Install all dependencies
 npm run install:all
@@ -231,7 +231,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ### Getting Help
 1. 📖 Check the component-specific README files
 2. 🔧 Review the [Development Utilities](.extras/README.md)
-3. 🐛 Search existing [Issues](https://github.com/yourusername/chrome-pass/issues)
+3. 🐛 Search existing [Issues](https://github.com/izharaazmi/team-credential-hub/issues)
 4. 💬 Create a new issue with detailed information
 
 ## 🌟 Features Roadmap
@@ -245,10 +245,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📊 Project Stats
 
-![GitHub stars](https://img.shields.io/github/stars/yourusername/chrome-pass?style=social)
-![GitHub forks](https://img.shields.io/github/forks/yourusername/chrome-pass?style=social)
-![GitHub issues](https://img.shields.io/github/issues/yourusername/chrome-pass)
-![GitHub pull requests](https://img.shields.io/github/issues-pr/yourusername/chrome-pass)
+![GitHub stars](https://img.shields.io/github/stars/izharaazmi/team-credential-hub?style=social)
+![GitHub forks](https://img.shields.io/github/forks/izharaazmi/team-credential-hub?style=social)
+![GitHub issues](https://img.shields.io/github/issues/izharaazmi/team-credential-hub)
+![GitHub pull requests](https://img.shields.io/github/issues-pr/izharaazmi/team-credential-hub)
 
 ---
 
@@ -256,6 +256,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Made with ❤️ for secure team collaboration**
 
-[⭐ Star this repo](https://github.com/yourusername/chrome-pass) | [🐛 Report Bug](https://github.com/yourusername/chrome-pass/issues) | [💡 Request Feature](https://github.com/yourusername/chrome-pass/issues)
+[⭐ Star this repo](https://github.com/izharaazmi/team-credential-hub) | [🐛 Report Bug](https://github.com/izharaazmi/team-credential-hub/issues) | [💡 Request Feature](https://github.com/izharaazmi/team-credential-hub/issues)
 
 </div>
