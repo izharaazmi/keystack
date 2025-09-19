@@ -35,7 +35,7 @@ api.interceptors.response.use(
 			const retryAfter = error.response?.data?.retryAfter || '15 minutes';
 			const errorMessage = error.response?.data?.error || 'Too many requests. Please try again later.';
 			console.warn(`Rate limited: ${errorMessage}. Retry after: ${retryAfter}`);
-			
+
 			// Show user-friendly error message
 			if (window.toast) {
 				window.toast.error(`${errorMessage} Please wait ${retryAfter} before trying again.`);

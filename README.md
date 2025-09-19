@@ -16,6 +16,7 @@ A comprehensive password-sharing solution with backend API, admin frontend, and 
 ## Architecture
 
 ### Backend API (Node.js + Express + MySQL)
+
 - RESTful API with JWT authentication
 - MySQL database with Sequelize ORM
 - Email verification system
@@ -23,6 +24,7 @@ A comprehensive password-sharing solution with backend API, admin frontend, and 
 - Rate limiting and security middleware
 
 ### Admin Frontend (React)
+
 - Modern React application with Tailwind CSS
 - User and team management
 - Credential CRUD operations
@@ -30,6 +32,7 @@ A comprehensive password-sharing solution with backend API, admin frontend, and 
 - Responsive design
 
 ### Chrome Extension
+
 - Popup interface for quick credential access
 - Content script for auto-filling forms
 - Background service worker
@@ -39,7 +42,8 @@ A comprehensive password-sharing solution with backend API, admin frontend, and 
 ## Quick Start
 
 ### Prerequisites
-- Node.js 16+ 
+
+- Node.js 16+
 - npm or yarn
 - MySQL 5.7+ or 8.0+
 - Chrome browser (for extension)
@@ -47,6 +51,7 @@ A comprehensive password-sharing solution with backend API, admin frontend, and 
 ### Installation
 
 1. **Clone and install dependencies:**
+
 ```bash
 git clone <repository-url>
 cd chrome-pass
@@ -54,6 +59,7 @@ npm run install:all
 ```
 
 2. **Set up environment variables:**
+
 ```bash
 cd backend
 cp env.example .env
@@ -61,6 +67,7 @@ cp env.example .env
 ```
 
 3. **Create admin user and seed sample data:**
+
 ```bash
 cd backend
 npm run create-admin
@@ -68,28 +75,32 @@ npm run seed-credentials
 ```
 
 4. **Start the backend server:**
+
 ```bash
 npm run backend:dev
 ```
 
 5. **Start the admin frontend:**
+
 ```bash
 npm run admin:dev
 ```
 
 6. **Load the Chrome extension:**
-   - Open Chrome and go to `chrome://extensions/`
-   - Enable "Developer mode"
-   - Click "Load unpacked" and select the `chrome-extension` folder
+    - Open Chrome and go to `chrome://extensions/`
+    - Enable "Developer mode"
+    - Click "Load unpacked" and select the `chrome-extension` folder
 
 ### Default Credentials
 
 **Admin Login:**
+
 - Email: `admin@chromepass.com`
 - Password: `admin123`
 
 **Sample Credentials:**
 The system comes pre-loaded with 8 sample credentials for testing. See `DEFAULT_CREDENTIALS.txt` for the complete list including:
+
 - GitHub, AWS, Slack, JIRA, Docker Hub, Stripe, Google Workspace, Salesforce
 
 These credentials are automatically created when you run `npm run seed-credentials`.
@@ -97,6 +108,7 @@ These credentials are automatically created when you run `npm run seed-credentia
 ### Configuration
 
 #### Backend (.env)
+
 ```env
 NODE_ENV=development
 PORT=3001
@@ -124,18 +136,21 @@ ADMIN_URL=http://localhost:3002
 ```
 
 #### Chrome Extension
+
 - Default API URL: `http://localhost:3001/api`
 - Can be changed in extension settings
 
 ## Usage
 
 ### Admin Dashboard
+
 1. Navigate to `http://localhost:3002`
 2. Register a new admin account
 3. Verify your email
 4. Manage users, teams, and credentials
 
 ### Chrome Extension
+
 1. Click the extension icon in Chrome
 2. Sign in with your credentials
 3. Visit any website with matching credentials
@@ -144,12 +159,14 @@ ADMIN_URL=http://localhost:3002
 ### API Endpoints
 
 #### Authentication
+
 - `POST /api/auth/register` - Register new user
 - `POST /api/auth/login` - Login user
 - `GET /api/auth/verify-email/:token` - Verify email
 - `GET /api/auth/me` - Get current user
 
 #### Credentials
+
 - `GET /api/credentials` - Get user's credentials
 - `GET /api/credentials/for-url` - Get credentials for current URL
 - `POST /api/credentials` - Create credential
@@ -157,6 +174,7 @@ ADMIN_URL=http://localhost:3002
 - `DELETE /api/credentials/:id` - Delete credential
 
 #### Users
+
 - `GET /api/users` - Get all users (admin)
 - `GET /api/users/:id` - Get user by ID
 - `PUT /api/users/:id` - Update user
@@ -164,6 +182,7 @@ ADMIN_URL=http://localhost:3002
 - `PATCH /api/users/:id/deactivate` - Deactivate user (admin)
 
 #### Teams
+
 - `GET /api/teams` - Get all teams
 - `POST /api/teams` - Create team
 - `PUT /api/teams/:id` - Update team
@@ -174,22 +193,26 @@ ADMIN_URL=http://localhost:3002
 ## Database Schema
 
 ### Users
+
 - id, email, password, firstName, lastName
 - isEmailVerified, emailVerificationToken
 - role (admin/user), isActive, lastLogin
 - timestamps
 
 ### Credentials
+
 - id, label, url, urlPattern, username, password
 - description, project, isActive, createdById
 - accessType (individual/group/all)
 - lastUsed, useCount, timestamps
 
 ### Groups
+
 - id, name, description, createdById, isActive
 - timestamps
 
 ### Junction Tables
+
 - UserGroup (user_id, group_id)
 - CredentialUser (credential_id, user_id)
 - CredentialGroup (credential_id, group_id)
@@ -207,18 +230,21 @@ ADMIN_URL=http://localhost:3002
 ## Development
 
 ### Backend Development
+
 ```bash
 cd backend
 npm run dev
 ```
 
 ### Frontend Development
+
 ```bash
 cd admin-frontend
 npm start
 ```
 
 ### Extension Development
+
 1. Make changes to extension files
 2. Go to `chrome://extensions/`
 3. Click the refresh button on the extension
@@ -227,22 +253,28 @@ npm start
 ## Deployment
 
 ### Backend
+
 1. Set production environment variables
 2. Build and start the server:
+
 ```bash
 npm run build
 npm start
 ```
 
 ### Frontend
+
 1. Build the React app:
+
 ```bash
 cd admin-frontend
 npm run build
 ```
+
 2. Serve the build folder with a web server
 
 ### Chrome Extension
+
 1. Package the extension files
 2. Upload to Chrome Web Store or distribute manually
 
@@ -261,6 +293,7 @@ MIT License - see LICENSE file for details
 ## Support
 
 For issues and questions:
+
 1. Check the GitHub issues
 2. Create a new issue with detailed description
 3. Include logs and error messages

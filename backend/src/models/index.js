@@ -1,12 +1,12 @@
-import User from './User.js';
 import Credential from './Credential.js';
+import CredentialGroup from './CredentialGroup.js';
+import CredentialUser from './CredentialUser.js';
 import Group from './Group.js';
 import Project from './Project.js';
-import UserGroup from './UserGroup.js';
-import CredentialUser from './CredentialUser.js';
-import CredentialGroup from './CredentialGroup.js';
-import ProjectUser from './ProjectUser.js';
 import ProjectGroup from './ProjectGroup.js';
+import ProjectUser from './ProjectUser.js';
+import User from './User.js';
+import UserGroup from './UserGroup.js';
 
 // Define associations
 User.belongsToMany(Group, {through: UserGroup, foreignKey: 'userId', otherKey: 'groupId', as: 'Groups'});

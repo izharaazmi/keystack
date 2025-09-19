@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 import {connectDB, sequelize} from '../config/database.js';
-import {Credential, User, Group, CredentialUser, CredentialGroup} from '../models/index.js';
+import {Credential, CredentialGroup, CredentialUser, Group, User} from '../models/index.js';
 
 dotenv.config();
 
@@ -167,11 +167,11 @@ const seedCredentials = async () => {
 					console.log(`  - Assigned to all users`);
 				} else if (credential.accessType === 'group') {
 					// Find matching group by project name
-					const matchingGroup = createdGroups.find(g => 
+					const matchingGroup = createdGroups.find(g =>
 						g.name.toLowerCase().includes(credential.project.toLowerCase()) ||
 						credential.project.toLowerCase().includes(g.name.toLowerCase())
 					);
-					
+
 					if (matchingGroup) {
 						await CredentialGroup.create({
 							credentialId: credential.id,

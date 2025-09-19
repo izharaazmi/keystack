@@ -1,5 +1,5 @@
-import {Sequelize} from 'sequelize';
 import dotenv from 'dotenv';
+import {Sequelize} from 'sequelize';
 
 // Load environment variables first
 dotenv.config();
@@ -32,7 +32,7 @@ const connectDB = async () => {
 	try {
 		await sequelize.authenticate();
 		console.log('MySQL database connected successfully');
-		
+
 		// Only sync if database doesn't exist (first run)
 		// This prevents data loss on subsequent runs
 		const tableExists = await sequelize.getQueryInterface().showAllTables();

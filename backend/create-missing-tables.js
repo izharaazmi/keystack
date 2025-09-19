@@ -1,13 +1,13 @@
-import { sequelize } from './src/config/database.js';
+import {sequelize} from './src/config/database.js';
 
 async function createMissingTables() {
-  try {
-    await sequelize.authenticate();
-    console.log('✅ Database connected');
-    
-    // Create cp_user_groups table
-    console.log('📝 Creating cp_user_groups table...');
-    await sequelize.query(`
+	try {
+		await sequelize.authenticate();
+		console.log('✅ Database connected');
+
+		// Create cp_user_groups table
+		console.log('📝 Creating cp_user_groups table...');
+		await sequelize.query(`
       CREATE TABLE IF NOT EXISTS cp_user_groups (
         id INT PRIMARY KEY AUTO_INCREMENT,
         user_id INT NOT NULL,
@@ -21,11 +21,11 @@ async function createMissingTables() {
         INDEX idx_group_id (group_id)
       )
     `);
-    console.log('✅ cp_user_groups table created');
-    
-    // Create cp_credential_users table
-    console.log('📝 Creating cp_credential_users table...');
-    await sequelize.query(`
+		console.log('✅ cp_user_groups table created');
+
+		// Create cp_credential_users table
+		console.log('📝 Creating cp_credential_users table...');
+		await sequelize.query(`
       CREATE TABLE IF NOT EXISTS cp_credential_users (
         id INT PRIMARY KEY AUTO_INCREMENT,
         credential_id INT NOT NULL,
@@ -39,20 +39,20 @@ async function createMissingTables() {
         INDEX idx_user_id (user_id)
       )
     `);
-    console.log('✅ cp_credential_users table created');
-    
-    // Check tables
-    const [tables] = await sequelize.query('SHOW TABLES');
-    console.log('\n📊 All tables in database:');
-    tables.forEach(table => {
-      console.log(`- ${Object.values(table)[0]}`);
-    });
-    
-  } catch (error) {
-    console.error('❌ Error:', error.message);
-  } finally {
-    await sequelize.close();
-  }
+		console.log('✅ cp_credential_users table created');
+
+		// Check tables
+		const [tables] = await sequelize.query('SHOW TABLES');
+		console.log('\n📊 All tables in database:');
+		tables.forEach(table => {
+			console.log(`- ${Object.values(table)[0]}`);
+		});
+
+	} catch (error) {
+		console.error('❌ Error:', error.message);
+	} finally {
+		await sequelize.close();
+	}
 }
 
 createMissingTables();

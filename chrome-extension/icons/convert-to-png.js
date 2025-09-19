@@ -1,27 +1,27 @@
 // Convert HTML icons to PNG using a simple approach
 const fs = require('fs');
-const { exec } = require('child_process');
+const {exec} = require('child_process');
 
 // Check if we can use a headless browser to convert HTML to PNG
 function checkForPuppeteer() {
-  try {
-    require('puppeteer');
-    return true;
-  } catch (e) {
-    return false;
-  }
+	try {
+		require('puppeteer');
+		return true;
+	} catch (e) {
+		return false;
+	}
 }
 
 // Create a simple PNG using a basic approach
 function createSimplePNG(size) {
-  // Create a minimal PNG file with a blue circle
-  // This is a very basic approach - in production you'd use a proper PNG library
-  
-  const width = size;
-  const height = size;
-  
-  // Create a simple data URL that represents a blue circle
-  const canvas = `
+	// Create a minimal PNG file with a blue circle
+	// This is a very basic approach - in production you'd use a proper PNG library
+
+	const width = size;
+	const height = size;
+
+	// Create a simple data URL that represents a blue circle
+	const canvas = `
     <canvas width="${width}" height="${height}" id="canvas"></canvas>
     <script>
       const canvas = document.getElementById('canvas');
@@ -30,37 +30,37 @@ function createSimplePNG(size) {
       // Draw blue circle
       ctx.fillStyle = '#3B82F6';
       ctx.beginPath();
-      ctx.arc(${width/2}, ${height/2}, ${width/2 - 2}, 0, 2 * Math.PI);
+      ctx.arc(${width / 2}, ${height / 2}, ${width / 2 - 2}, 0, 2 * Math.PI);
       ctx.fill();
       
       // Draw white key icon
       ctx.fillStyle = 'white';
       ctx.beginPath();
-      ctx.arc(${width/2}, ${height/2}, ${width/4}, 0, 2 * Math.PI);
+      ctx.arc(${width / 2}, ${height / 2}, ${width / 4}, 0, 2 * Math.PI);
       ctx.fill();
       
       // Draw key shaft
-      ctx.fillRect(${width/2 + width/8}, ${height/2 - width/16}, ${width/4}, ${width/8});
+      ctx.fillRect(${width / 2 + width / 8}, ${height / 2 - width / 16}, ${width / 4}, ${width / 8});
       
       // Draw key teeth
-      ctx.fillRect(${width/2 + width/16}, ${height/2 - width/8}, ${width/16}, ${width/4});
-      ctx.fillRect(${width/2 + width/12}, ${height/2 - width/6}, ${width/16}, ${width/3});
+      ctx.fillRect(${width / 2 + width / 16}, ${height / 2 - width / 8}, ${width / 16}, ${width / 4});
+      ctx.fillRect(${width / 2 + width / 12}, ${height / 2 - width / 6}, ${width / 16}, ${width / 3});
       
       // Convert to data URL
       const dataURL = canvas.toDataURL('image/png');
       console.log(dataURL);
     </script>
   `;
-  
-  return canvas;
+
+	return canvas;
 }
 
 // Create HTML files that can be opened in browser
 function createConvertibleHTML() {
-  const sizes = [16, 32, 48, 128];
-  
-  sizes.forEach(size => {
-    const html = `<!DOCTYPE html>
+	const sizes = [16, 32, 48, 128];
+
+	sizes.forEach(size => {
+		const html = `<!DOCTYPE html>
 <html>
 <head>
   <style>
@@ -153,25 +153,25 @@ function createConvertibleHTML() {
   </div>
 </body>
 </html>`;
-    
-    fs.writeFileSync(`icon${size}.html`, html);
-  });
-  
-  console.log('HTML files created for conversion to PNG');
-  console.log('To convert to PNG:');
-  console.log('1. Open each HTML file in Chrome');
-  console.log('2. Right-click on the icon and "Save image as..."');
-  console.log('3. Or use Chrome DevTools:');
-  console.log('   - Right-click on the icon');
-  console.log('   - Inspect Element');
-  console.log('   - Right-click on the .icon element in DevTools');
-  console.log('   - "Capture node screenshot"');
-  console.log('4. Save as icon16.png, icon32.png, icon48.png, icon128.png');
+
+		fs.writeFileSync(`icon${size}.html`, html);
+	});
+
+	console.log('HTML files created for conversion to PNG');
+	console.log('To convert to PNG:');
+	console.log('1. Open each HTML file in Chrome');
+	console.log('2. Right-click on the icon and "Save image as..."');
+	console.log('3. Or use Chrome DevTools:');
+	console.log('   - Right-click on the icon');
+	console.log('   - Inspect Element');
+	console.log('   - Right-click on the .icon element in DevTools');
+	console.log('   - "Capture node screenshot"');
+	console.log('4. Save as icon16.png, icon32.png, icon48.png, icon128.png');
 }
 
 // Create a simple script that can be run to generate PNGs
 function createPNGGenerator() {
-  const script = `#!/bin/bash
+	const script = `#!/bin/bash
 # Simple script to convert HTML to PNG using Chrome headless
 # Make sure Chrome is installed and accessible
 
@@ -192,10 +192,10 @@ done
 
 echo "Conversion complete!"
 `;
-  
-  fs.writeFileSync('convert-to-png.sh', script);
-  fs.chmodSync('convert-to-png.sh', '755');
-  console.log('Created convert-to-png.sh script');
+
+	fs.writeFileSync('convert-to-png.sh', script);
+	fs.chmodSync('convert-to-png.sh', '755');
+	console.log('Created convert-to-png.sh script');
 }
 
 // Generate everything

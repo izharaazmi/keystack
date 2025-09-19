@@ -1,15 +1,15 @@
-import express from 'express';
 import cors from 'cors';
-import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
-import {connectDB} from './config/database.js';
 import dotenv from 'dotenv';
+import express from 'express';
+import rateLimit from 'express-rate-limit';
+import helmet from 'helmet';
+import {connectDB} from './config/database.js';
 
 import authRoutes from './routes/auth.js';
 import credentialRoutes from './routes/credentials.js';
+import projectRoutes from './routes/projects.js';
 import teamRoutes from './routes/teams.js';
 import userRoutes from './routes/users.js';
-import projectRoutes from './routes/projects.js';
 
 dotenv.config();
 

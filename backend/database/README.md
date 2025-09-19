@@ -5,6 +5,7 @@ This directory contains the MySQL database initialization scripts and configurat
 ## 🗄️ Database Schema
 
 ### Tables
+
 - **users** - User accounts and authentication
 - **groups** - Team/group definitions
 - **credentials** - Password credentials and access rules
@@ -13,6 +14,7 @@ This directory contains the MySQL database initialization scripts and configurat
 - **credential_groups** - Many-to-many relationship between credentials and groups
 
 ### Key Features
+
 - **Consistent Naming**: All tables and fields use snake_case
 - **Proper Indexing**: Optimized for performance
 - **Foreign Keys**: Maintains referential integrity
@@ -22,28 +24,33 @@ This directory contains the MySQL database initialization scripts and configurat
 ## 🚀 Quick Setup
 
 ### 1. Prerequisites
+
 - MySQL 8.0 or higher
 - Node.js 16 or higher
 - npm or yarn
 
 ### 2. Install Dependencies
+
 ```bash
 cd backend
 npm install
 ```
 
 ### 3. Configure Environment
+
 ```bash
 cp env.example .env
 # Edit .env with your MySQL credentials
 ```
 
 ### 4. Initialize Database
+
 ```bash
 npm run setup-db
 ```
 
 This will:
+
 - Create the `chrome_pass` database
 - Create all tables with proper relationships
 - Insert sample data (admin user, test users, groups, credentials)
@@ -54,12 +61,14 @@ This will:
 If you prefer to set up the database manually:
 
 ### 1. Create Database
+
 ```sql
 CREATE DATABASE chrome_pass CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE chrome_pass;
 ```
 
 ### 2. Run SQL Script
+
 ```bash
 mysql -u root -p chrome_pass < init.sql
 ```
@@ -82,10 +91,12 @@ DB_PASSWORD=your-mysql-password
 The initialization script includes:
 
 ### Users
+
 - **Admin**: admin@chromepass.com / admin123
 - **Test Users**: 5 sample users for testing
 
 ### Groups
+
 - Development Team
 - DevOps Team
 - Project Management
@@ -94,6 +105,7 @@ The initialization script includes:
 - IT Administration
 
 ### Credentials
+
 - 8 sample credentials with different access types
 - Realistic URLs and strong passwords
 - Proper project categorization
@@ -101,6 +113,7 @@ The initialization script includes:
 ## 🔍 Database Structure
 
 ### Users Table
+
 ```sql
 CREATE TABLE users (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -119,6 +132,7 @@ CREATE TABLE users (
 ```
 
 ### Groups Table
+
 ```sql
 CREATE TABLE groups (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -133,6 +147,7 @@ CREATE TABLE groups (
 ```
 
 ### Credentials Table
+
 ```sql
 CREATE TABLE credentials (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -172,16 +187,19 @@ CREATE TABLE credentials (
 ## 🛠️ Maintenance
 
 ### Backup Database
+
 ```bash
 mysqldump -u root -p chrome_pass > chrome_pass_backup.sql
 ```
 
 ### Restore Database
+
 ```bash
 mysql -u root -p chrome_pass < chrome_pass_backup.sql
 ```
 
 ### Reset Database
+
 ```bash
 mysql -u root -p -e "DROP DATABASE IF EXISTS chrome_pass;"
 npm run setup-db
@@ -192,22 +210,23 @@ npm run setup-db
 ### Common Issues
 
 1. **Connection Refused**
-   - Check if MySQL is running
-   - Verify host and port settings
+    - Check if MySQL is running
+    - Verify host and port settings
 
 2. **Access Denied**
-   - Check username and password
-   - Ensure user has CREATE privileges
+    - Check username and password
+    - Ensure user has CREATE privileges
 
 3. **Database Not Found**
-   - Run the setup script first
-   - Check database name in .env
+    - Run the setup script first
+    - Check database name in .env
 
 4. **Table Already Exists**
-   - Database was already initialized
-   - This is normal for subsequent runs
+    - Database was already initialized
+    - This is normal for subsequent runs
 
 ### Logs
+
 Check the console output for detailed error messages and setup progress.
 
 ## 📚 Additional Resources

@@ -3,50 +3,50 @@ const fs = require('fs');
 
 // Create a very simple PNG file
 function createBasicPNG(size, filename) {
-  // This creates a minimal PNG with a blue circle
-  // PNG signature
-  const signature = Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
-  
-  // For simplicity, let's create a basic 1x1 pixel PNG and scale it
-  // This is a minimal valid PNG
-  const minimalPNG = Buffer.from([
-    0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
-    0x00, 0x00, 0x00, 0x0D, // IHDR chunk length
-    0x49, 0x48, 0x44, 0x52, // IHDR
-    0x00, 0x00, 0x00, 0x01, // width = 1
-    0x00, 0x00, 0x00, 0x01, // height = 1
-    0x08, // bit depth
-    0x02, // color type (RGB)
-    0x00, // compression
-    0x00, // filter
-    0x00, // interlace
-    0x90, 0x77, 0x53, 0xDE, // IHDR CRC
-    0x00, 0x00, 0x00, 0x0C, // IDAT chunk length
-    0x49, 0x44, 0x41, 0x54, // IDAT
-    0x08, 0x99, 0x01, 0x01, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x02, 0x00, 0x01, // compressed data
-    0xE2, 0x21, 0xBC, 0x33, // IDAT CRC
-    0x00, 0x00, 0x00, 0x00, // IEND chunk length
-    0x49, 0x45, 0x4E, 0x44, // IEND
-    0xAE, 0x42, 0x60, 0x82  // IEND CRC
-  ]);
-  
-  // For now, let's create a simple approach using base64 encoded PNG data
-  const createColoredPNG = (width, height, color) => {
-    // This is a simplified approach - in reality you'd use a proper PNG library
-    // For now, let's create a basic file that browsers can interpret
-    return minimalPNG;
-  };
-  
-  // Create a simple blue square PNG
-  const pngData = createColoredPNG(size, size, '#3B82F6');
-  fs.writeFileSync(filename, pngData);
-  console.log(`Created ${filename} (${size}x${size})`);
+	// This creates a minimal PNG with a blue circle
+	// PNG signature
+	const signature = Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+
+	// For simplicity, let's create a basic 1x1 pixel PNG and scale it
+	// This is a minimal valid PNG
+	const minimalPNG = Buffer.from([
+		0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
+		0x00, 0x00, 0x00, 0x0D, // IHDR chunk length
+		0x49, 0x48, 0x44, 0x52, // IHDR
+		0x00, 0x00, 0x00, 0x01, // width = 1
+		0x00, 0x00, 0x00, 0x01, // height = 1
+		0x08, // bit depth
+		0x02, // color type (RGB)
+		0x00, // compression
+		0x00, // filter
+		0x00, // interlace
+		0x90, 0x77, 0x53, 0xDE, // IHDR CRC
+		0x00, 0x00, 0x00, 0x0C, // IDAT chunk length
+		0x49, 0x44, 0x41, 0x54, // IDAT
+		0x08, 0x99, 0x01, 0x01, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x02, 0x00, 0x01, // compressed data
+		0xE2, 0x21, 0xBC, 0x33, // IDAT CRC
+		0x00, 0x00, 0x00, 0x00, // IEND chunk length
+		0x49, 0x45, 0x4E, 0x44, // IEND
+		0xAE, 0x42, 0x60, 0x82  // IEND CRC
+	]);
+
+	// For now, let's create a simple approach using base64 encoded PNG data
+	const createColoredPNG = (width, height, color) => {
+		// This is a simplified approach - in reality you'd use a proper PNG library
+		// For now, let's create a basic file that browsers can interpret
+		return minimalPNG;
+	};
+
+	// Create a simple blue square PNG
+	const pngData = createColoredPNG(size, size, '#3b82f6');
+	fs.writeFileSync(filename, pngData);
+	console.log(`Created ${filename} (${size}x${size})`);
 }
 
 // Since creating proper PNG files programmatically is complex,
 // let's create a different approach - generate HTML files that can be converted
 function createIconHTML(size, filename) {
-  const html = `<!DOCTYPE html>
+	const html = `<!DOCTYPE html>
 <html>
 <head>
   <style>
@@ -138,9 +138,9 @@ function createIconHTML(size, filename) {
   </div>
 </body>
 </html>`;
-  
-  fs.writeFileSync(filename, html);
-  console.log(`Created ${filename} - open in browser and save as PNG`);
+
+	fs.writeFileSync(filename, html);
+	console.log(`Created ${filename} - open in browser and save as PNG`);
 }
 
 // Generate HTML files for each size

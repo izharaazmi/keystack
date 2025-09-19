@@ -6,18 +6,18 @@ const path = require('path');
 
 // Create a simple PNG generator for basic icons
 function createPNGIcon(size, filename) {
-  // For now, we'll create a simple colored square as a placeholder
-  // In a real implementation, you'd use a library like 'canvas' or 'sharp'
-  
-  const colors = {
-    16: '#3B82F6',
-    32: '#3B82F6', 
-    48: '#3B82F6',
-    128: '#3B82F6'
-  };
-  
-  // Create a simple HTML file that can be used to generate the icons
-  const html = `
+	// For now, we'll create a simple colored square as a placeholder
+	// In a real implementation, you'd use a library like 'canvas' or 'sharp'
+
+	const colors = {
+		16: '#3b82f6',
+		32: '#3b82f6',
+		48: '#3b82f6',
+		128: '#3b82f6'
+	};
+
+	// Create a simple HTML file that can be used to generate the icons
+	const html = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -72,9 +72,9 @@ function createPNGIcon(size, filename) {
   </div>
 </body>
 </html>`;
-  
-  fs.writeFileSync(path.join(__dirname, `${filename}.html`), html);
-  console.log(`Created ${filename}.html - you can open this in a browser and take a screenshot to create the PNG`);
+
+	fs.writeFileSync(path.join(__dirname, `${filename}.html`), html);
+	console.log(`Created ${filename}.html - you can open this in a browser and take a screenshot to create the PNG`);
 }
 
 // Generate HTML files for each icon size

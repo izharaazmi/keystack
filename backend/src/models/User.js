@@ -1,6 +1,6 @@
-import {DataTypes} from 'sequelize';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
+import {DataTypes} from 'sequelize';
 import {sequelize} from '../config/database.js';
 
 const User = sequelize.define('User', {
@@ -80,11 +80,11 @@ const User = sequelize.define('User', {
 });
 
 // Instance methods
-User.prototype.comparePassword = async function(candidatePassword) {
+User.prototype.comparePassword = async function (candidatePassword) {
 	return bcrypt.compare(candidatePassword, this.password);
 };
 
-User.prototype.generateEmailVerificationToken = function() {
+User.prototype.generateEmailVerificationToken = function () {
 	this.emailVerificationToken = crypto.randomBytes(32).toString('hex');
 	return this.emailVerificationToken;
 };
@@ -106,38 +106,38 @@ User.ROLES = {
 };
 
 // Helper methods for state checking
-User.prototype.isTrashed = function() {
+User.prototype.isTrashed = function () {
 	return this.state === User.STATES.TRASHED;
 };
 
-User.prototype.isBlocked = function() {
+User.prototype.isBlocked = function () {
 	return this.state === User.STATES.BLOCKED;
 };
 
-User.prototype.isPending = function() {
+User.prototype.isPending = function () {
 	return this.state === User.STATES.PENDING;
 };
 
-User.prototype.isActive = function() {
+User.prototype.isActive = function () {
 	return this.state === User.STATES.ACTIVE;
 };
 
-User.prototype.canLogin = function() {
+User.prototype.canLogin = function () {
 	return this.state === User.STATES.ACTIVE;
 };
 
 // Helper methods for role checking
-User.prototype.isUser = function() {
+User.prototype.isUser = function () {
 	return this.role === User.ROLES.USER;
 };
 
-User.prototype.isAdmin = function() {
+User.prototype.isAdmin = function () {
 	return this.role === User.ROLES.ADMIN;
 };
 
 // Keep role as integer for frontend
-User.prototype.toJSON = function() {
-	return { ...this.dataValues };
+User.prototype.toJSON = function () {
+	return {...this.dataValues};
 };
 
 export default User;

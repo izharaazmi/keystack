@@ -1,4 +1,4 @@
-import React, {createContext, useContext, useState, useEffect} from 'react';
+import React, {createContext, useContext, useEffect, useState} from 'react';
 import {api} from '../utils/api';
 
 const AuthContext = createContext();
@@ -42,11 +42,11 @@ export const AuthProvider = ({children}) => {
 		try {
 			const response = await api.post('/auth/login', {email, password});
 			const {token, user} = response.data;
-			
+
 			localStorage.setItem('token', token);
 			api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 			setUser(user);
-			
+
 			return {success: true};
 		} catch (error) {
 			return {

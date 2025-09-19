@@ -1,17 +1,17 @@
 import React from 'react';
-import {BrowserRouter as Router, Routes, Route, Navigate} from 'react-router-dom';
-import {QueryClient, QueryClientProvider} from 'react-query';
 import {Toaster} from 'react-hot-toast';
-import {AuthProvider} from './contexts/AuthContext';
-import ProtectedRoute from './components/ProtectedRoute';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Credentials from './pages/Credentials';
-import Projects from './pages/Projects';
-import Users from './pages/Users';
-import Teams from './pages/Teams';
-import Profile from './pages/Profile';
+import {QueryClient, QueryClientProvider} from 'react-query';
+import {BrowserRouter as Router, Navigate, Route, Routes} from 'react-router-dom';
 import Layout from './components/Layout';
+import ProtectedRoute from './components/ProtectedRoute';
+import {AuthProvider} from './contexts/AuthContext';
+import Credentials from './pages/Credentials';
+import Dashboard from './pages/Dashboard';
+import Login from './pages/Login';
+import Profile from './pages/Profile';
+import Projects from './pages/Projects';
+import Teams from './pages/Teams';
+import Users from './pages/Users';
 
 const queryClient = new QueryClient({
 	defaultOptions: {
@@ -29,25 +29,25 @@ function App() {
 				<Router>
 					<div className="min-h-screen bg-gray-50">
 						<Routes>
-							<Route path="/login" element={<Login />} />
+							<Route path="/login" element={<Login/>}/>
 							<Route
 								path="/"
 								element={
 									<ProtectedRoute>
-										<Layout />
+										<Layout/>
 									</ProtectedRoute>
 								}
 							>
-								<Route index element={<Navigate to="/dashboard" replace />} />
-								<Route path="dashboard" element={<Dashboard />} />
-								<Route path="credentials" element={<Credentials />} />
-								<Route path="projects" element={<Projects />} />
-								<Route path="users" element={<Users />} />
-								<Route path="teams" element={<Teams />} />
-								<Route path="profile" element={<Profile />} />
+								<Route index element={<Navigate to="/dashboard" replace/>}/>
+								<Route path="dashboard" element={<Dashboard/>}/>
+								<Route path="credentials" element={<Credentials/>}/>
+								<Route path="projects" element={<Projects/>}/>
+								<Route path="users" element={<Users/>}/>
+								<Route path="teams" element={<Teams/>}/>
+								<Route path="profile" element={<Profile/>}/>
 							</Route>
 						</Routes>
-						<Toaster position="top-right" />
+						<Toaster position="top-right"/>
 					</div>
 				</Router>
 			</AuthProvider>
