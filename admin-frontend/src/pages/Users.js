@@ -1,12 +1,14 @@
 import React, {useState, useEffect, useMemo, useCallback} from 'react';
 import {useQuery, useMutation, useQueryClient} from 'react-query';
-import {useSearchParams} from 'react-router-dom';
-import {Search, Shield, Users as UsersIcon, Plus, ChevronUp, ChevronDown, X, Lock, User} from 'lucide-react';
+import {useSearchParams, useNavigate} from 'react-router-dom';
+import {Search, Shield, Users as UsersIcon, Plus, ChevronUp, ChevronDown, X, Lock, User, Edit3} from 'lucide-react';
 import {api} from '../utils/api';
 import toast from 'react-hot-toast';
 import Pagination from '../components/Pagination';
 import TeamAssignmentModal from '../components/TeamAssignmentModal';
+import TeamRemovalModal from '../components/TeamRemovalModal';
 import CreateUserModal from '../components/CreateUserModal';
+import EditUserModal from '../components/EditUserModal';
 import {useAuth} from '../contexts/AuthContext';
 
 // Role constants
@@ -26,6 +28,7 @@ const STATES = {
 const Users = () => {
   const {user: currentUser} = useAuth();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
@@ -37,16 +40,31 @@ const Users = () => {
   const [pageSize, setPageSize] = useState(50);
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [showTeamModal, setShowTeamModal] = useState(false);
+  const [showTeamRemovalModal, setShowTeamRemovalModal] = useState(false);
   const [showUserModal, setShowUserModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
   const queryClient = useQueryClient();
 
-  // Initialize team filter from URL parameters
+  // Initialize filters from URL parameters
   useEffect(() => {
     const teamParam = searchParams.get('team');
+    const roleParam = searchParams.get('role');
+    const statusParam = searchParams.get('status');
+    
+    console.log('URL parameters:', { teamParam, roleParam, statusParam });
+    
     if (teamParam) {
       setTeamFilter(teamParam);
     }
-  }, [searchParams]);
+    if (roleParam) {
+      setRoleFilter(roleParam);
+    }
+    if (statusParam) {
+      setStatusFilter(statusParam);
+    }
+    
+  }, [searchParams, navigate]);
 
   // Debounce search term to prevent excessive API calls
   useEffect(() => {
@@ -112,6 +130,7 @@ const Users = () => {
       params.append('limit', pageSize.toString());
       
       console.log('Users query params:', params.toString()); // Debug log
+      console.log('Filter values:', { roleFilter, statusFilter, teamFilter }); // Debug log
       const response = await api.get(`/users?${params.toString()}`);
       return response.data;
     },
@@ -214,7 +233,18 @@ const Users = () => {
                     {user.id}
                   </td>
                   <td className="font-medium">
-                    {user.first_name} {user.last_name}
+                    <div className="flex items-center">
+                      <span>{user.first_name} {user.last_name}</span>
+                      {user.id !== currentUser?.id && (
+                        <button
+                          onClick={() => handleEditUser(user)}
+                          className="ml-2 p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                          title="Edit user"
+                        >
+                          <Edit3 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
                   </td>
                   <td>{user.email}</td>
                   <td className="text-center">
@@ -427,6 +457,22 @@ const Users = () => {
     }
   );
 
+  const batchRemoveMutation = useMutation(
+    ({ teamId, userIds }) => api.post(`/teams/${teamId}/remove-members`, { userIds }),
+    {
+      onSuccess: (data) => {
+        queryClient.invalidateQueries('teams');
+        queryClient.invalidateQueries('users');
+        setSelectedUsers([]);
+        setShowTeamRemovalModal(false);
+        toast.success(`Successfully removed ${data.data.removed} users from team`);
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.message || 'Failed to remove users from team');
+      },
+    }
+  );
+
   const createUserMutation = useMutation(
     (userData) => api.post('/auth/register', userData),
     {
@@ -437,6 +483,21 @@ const Users = () => {
       },
       onError: (error) => {
         toast.error(error.response?.data?.message || 'Failed to create user');
+      }
+    }
+  );
+
+  const updateUserMutation = useMutation(
+    ({ userId, userData }) => api.put(`/users/${userId}`, userData),
+    {
+      onSuccess: () => {
+        toast.success('User updated successfully');
+        queryClient.invalidateQueries('users');
+        setShowEditModal(false);
+        setEditingUser(null);
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.message || 'Failed to update user');
       }
     }
   );
@@ -514,6 +575,14 @@ const Users = () => {
     batchAssignMutation.mutate({ teamId: teamId, userIds: selectedUsers });
   }, [selectedUsers, batchAssignMutation]);
 
+  const handleBatchRemove = useCallback((teamId) => {
+    if (selectedUsers.length === 0) {
+      toast.error('Please select users to remove');
+      return;
+    }
+    batchRemoveMutation.mutate({ teamId: teamId, userIds: selectedUsers });
+  }, [selectedUsers, batchRemoveMutation]);
+
   const handleCreateUser = useCallback((formData) => {
     if (!formData.email || !formData.password || !formData.first_name || !formData.last_name) {
       toast.error('Please fill in all required fields');
@@ -521,6 +590,16 @@ const Users = () => {
     }
     createUserMutation.mutate(formData);
   }, [createUserMutation]);
+
+  const handleEditUser = useCallback((user) => {
+    setEditingUser(user);
+    setShowEditModal(true);
+  }, []);
+
+  const handleUpdateUser = useCallback((formData) => {
+    if (!editingUser) return;
+    updateUserMutation.mutate({ userId: editingUser.id, userData: formData });
+  }, [updateUserMutation, editingUser]);
 
   const handleRoleChange = useCallback((userId, newRole) => {
     // Check if this would leave no admins
@@ -542,21 +621,48 @@ const Users = () => {
     console.log('Role filter changed:', value); // Debug log
     setRoleFilter(value);
     setCurrentPage(1);
-  }, []);
+    
+    // Update URL parameters
+    const newSearchParams = new URLSearchParams(searchParams);
+    if (value) {
+      newSearchParams.set('role', value);
+    } else {
+      newSearchParams.delete('role');
+    }
+    navigate(`/users?${newSearchParams.toString()}`, { replace: true });
+  }, [searchParams, navigate]);
 
   const handleStatusFilterChange = useCallback((e) => {
     const value = e.target.value;
     console.log('Status filter changed:', value); // Debug log
     setStatusFilter(value);
     setCurrentPage(1);
-  }, []);
+    
+    // Update URL parameters
+    const newSearchParams = new URLSearchParams(searchParams);
+    if (value) {
+      newSearchParams.set('status', value);
+    } else {
+      newSearchParams.delete('status');
+    }
+    navigate(`/users?${newSearchParams.toString()}`, { replace: true });
+  }, [searchParams, navigate]);
 
   const handleTeamFilterChange = useCallback((e) => {
     const value = e.target.value;
     console.log('Team filter changed:', value, 'Type:', typeof value); // Debug log
     setTeamFilter(value);
     setCurrentPage(1);
-  }, []);
+    
+    // Update URL parameters
+    const newSearchParams = new URLSearchParams(searchParams);
+    if (value) {
+      newSearchParams.set('team', value);
+    } else {
+      newSearchParams.delete('team');
+    }
+    navigate(`/users?${newSearchParams.toString()}`, { replace: true });
+  }, [searchParams, navigate]);
 
   const handleUserToggleStatus = useCallback((user) => {
     return () => handleToggleStatus(user);
@@ -678,6 +784,14 @@ const Users = () => {
               >
                 <UsersIcon className="h-4 w-4 mr-2" />
                 Assign to Team
+              </button>
+              <button
+                onClick={() => setShowTeamRemovalModal(true)}
+                className="btn btn-danger btn-sm flex items-center"
+                disabled={batchRemoveMutation.isLoading}
+              >
+                <X className="h-4 w-4 mr-2" />
+                Remove from Team
               </button>
               <button
                 onClick={() => setSelectedUsers([])}
@@ -804,12 +918,32 @@ const Users = () => {
         isLoading={batchAssignMutation.isLoading}
       />
 
+      <TeamRemovalModal
+        isOpen={showTeamRemovalModal}
+        onClose={() => setShowTeamRemovalModal(false)}
+        selectedUsers={selectedUsers}
+        teams={teams}
+        onRemove={handleBatchRemove}
+        isLoading={batchRemoveMutation.isLoading}
+      />
+
       <CreateUserModal
         isOpen={showUserModal}
         onClose={() => setShowUserModal(false)}
         onCreate={handleCreateUser}
         isLoading={createUserMutation.isLoading}
         isFirstUser={users && users.length === 0}
+      />
+
+      <EditUserModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditingUser(null);
+        }}
+        user={editingUser}
+        onUpdate={handleUpdateUser}
+        isLoading={updateUserMutation.isLoading}
       />
     </div>
   );

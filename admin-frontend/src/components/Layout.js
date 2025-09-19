@@ -19,10 +19,10 @@ const Layout = () => {
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Credentials', href: '/credentials', icon: Key },
-    { name: 'Projects', href: '/projects', icon: Folder },
-    { name: 'Users', href: '/users', icon: Users },
     { name: 'Teams', href: '/teams', icon: UserCheck },
+    { name: 'Users', href: '/users', icon: Users },
+    { name: 'Projects', href: '/projects', icon: Folder },
+    { name: 'Credentials', href: '/credentials', icon: Key },
   ];
 
   const isActive = (path) => location.pathname === path;

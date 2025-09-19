@@ -363,4 +363,54 @@ router.post('/:id/batch-add-members', auth, async (req, res) => {
 	}
 });
 
+// Batch remove users from team
+router.post('/:id/remove-members', auth, async (req, res) => {
+	try {
+		const {id} = req.params;
+		const {userIds} = req.body;
+
+		if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+			return res.status(400).json({message: 'userIds array is required'});
+		}
+
+		const group = await Group.findByPk(id);
+		if (!group) {
+			return res.status(404).json({message: 'Group not found'});
+		}
+
+		// Check if user can modify this group
+		if (group.created_by_id !== req.user.id && req.user.role !== 'admin') {
+			return res.status(403).json({message: 'Not authorized to modify this group'});
+		}
+
+		// Remove users from group
+		const removedCount = await UserGroup.destroy({
+			where: {
+				groupId: id,
+				userId: userIds
+			}
+		});
+
+		const groupWithAssociations = await Group.findByPk(id, {
+			include: [
+				{model: User, as: 'Users', through: {attributes: []}}
+			]
+		});
+
+		// Get creator information
+		const creator = await User.findByPk(groupWithAssociations.created_by_id, {
+			attributes: ['first_name', 'last_name', 'email']
+		});
+		groupWithAssociations.dataValues.createdBy = creator;
+
+		res.json({
+			group: groupWithAssociations,
+			removed: removedCount
+		});
+	} catch (error) {
+		console.error('Batch remove members error:', error);
+		res.status(500).json({message: 'Server error'});
+	}
+});
+
 export default router;

@@ -1,5 +1,6 @@
 import React from 'react';
 import {useQuery} from 'react-query';
+import {useNavigate} from 'react-router-dom';
 import {
 	Users,
 	Key,
@@ -10,6 +11,7 @@ import {
 import {api} from '../utils/api';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const { data: stats, isLoading } = useQuery('dashboard-stats', async () => {
     const [usersRes, credentialsRes, teamsRes] = await Promise.all([
       api.get('/users/stats/overview'),
@@ -26,40 +28,46 @@ const Dashboard = () => {
 
   const statCards = [
     {
-      name: 'Total Users',
-      value: stats?.users?.totalUsers || 0,
-      icon: Users,
-      color: 'bg-blue-500',
-    },
-    {
-      name: 'Active Users',
-      value: stats?.users?.activeUsers || 0,
-      icon: Activity,
-      color: 'bg-green-500',
-    },
-    {
-      name: 'Verified Users',
-      value: stats?.users?.verifiedUsers || 0,
-      icon: Shield,
-      color: 'bg-purple-500',
-    },
-    {
-      name: 'Admin Users',
-      value: stats?.users?.adminUsers || 0,
-      icon: UserCheck,
-      color: 'bg-orange-500',
-    },
-    {
       name: 'Projects',
       value: stats?.projects?.length || 0,
       icon: Key,
       color: 'bg-indigo-500',
+      path: '/projects',
     },
     {
       name: 'Teams',
       value: stats?.teams?.length || 0,
       icon: UserCheck,
       color: 'bg-pink-500',
+      path: '/teams',
+    },
+    {
+      name: 'Total Users',
+      value: stats?.users?.totalUsers || 0,
+      icon: Users,
+      color: 'bg-blue-500',
+      path: '/users',
+    },
+    {
+      name: 'Admin Users',
+      value: stats?.users?.adminUsers || 0,
+      icon: Shield,
+      color: 'bg-orange-500',
+      path: '/users?role=1',
+    },
+    {
+      name: 'Active Users',
+      value: stats?.users?.activeUsers || 0,
+      icon: Activity,
+      color: 'bg-purple-500',
+      path: '/users?status=1',
+    },
+    {
+      name: 'Pending Users',
+      value: stats?.users?.pendingUsers || 0,
+      icon: Users,
+      color: 'bg-yellow-500',
+      path: '/users?status=0',
     },
   ];
 
@@ -85,7 +93,11 @@ const Dashboard = () => {
         {statCards.map((stat) => {
           const Icon = stat.icon;
           return (
-            <div key={stat.name} className="card p-6">
+            <div 
+              key={stat.name} 
+              className="card p-6 cursor-pointer hover:shadow-md transition-shadow duration-200"
+              onClick={() => navigate(stat.path)}
+            >
               <div className="flex items-center">
                 <div className="flex-shrink-0">
                   <div className={`${stat.color} p-3 rounded-md`}>

@@ -318,6 +318,7 @@ router.get('/stats/overview', adminAuth, async (req, res) => {
     const activeUsers = await User.count({ where: { state: 1 } });
     const verifiedUsers = await User.count({ where: { is_email_verified: true } });
     const adminUsers = await User.count({ where: { role: 1 } });
+    const pendingUsers = await User.count({ where: { state: 0 } });
 
     const recentUsers = await User.findAll({
       where: { state: 1 },
@@ -331,6 +332,7 @@ router.get('/stats/overview', adminAuth, async (req, res) => {
       activeUsers,
       verifiedUsers,
       adminUsers,
+      pendingUsers,
       recentUsers
     });
   } catch (error) {
