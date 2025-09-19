@@ -87,7 +87,24 @@ router.get('/', auth, async (req, res) => {
       order: [['created_at', 'DESC']]
     });
 
-    res.json({ credentials });
+    // Add user and team counts for each credential
+    const credentialsWithCounts = await Promise.all(credentials.map(async (credential) => {
+      const userCount = await CredentialUser.count({
+        where: { credentialId: credential.id }
+      });
+      
+      const teamCount = await CredentialGroup.count({
+        where: { credentialId: credential.id }
+      });
+
+      return {
+        ...credential.toJSON(),
+        user_count: userCount,
+        team_count: teamCount
+      };
+    }));
+
+    res.json({ credentials: credentialsWithCounts });
   } catch (error) {
     console.error('Get credentials error:', error);
     res.status(500).json({ message: 'Server error' });

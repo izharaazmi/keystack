@@ -13,7 +13,10 @@ import {
 	X,
 	Settings,
 	ChevronUp,
-	ChevronDown
+	ChevronDown,
+	Copy,
+	User,
+	Key
 } from 'lucide-react';
 import {api} from '../utils/api';
 import toast from 'react-hot-toast';
@@ -30,6 +33,7 @@ const Credentials = () => {
   const [selectedCredential, setSelectedCredential] = useState(null);
   const [assignedUsers, setAssignedUsers] = useState([]);
   const [assignedTeams, setAssignedTeams] = useState([]);
+  const [initialTab, setInitialTab] = useState('users');
   const [sortField, setSortField] = useState('id');
   const [sortDirection, setSortDirection] = useState('asc');
   const queryClient = useQueryClient();
@@ -119,9 +123,6 @@ const Credentials = () => {
       } else if (sortField === 'label') {
         aValue = a.label.toLowerCase();
         bValue = b.label.toLowerCase();
-      } else if (sortField === 'url') {
-        aValue = a.url.toLowerCase();
-        bValue = b.url.toLowerCase();
       } else if (sortField === 'username') {
         aValue = a.username.toLowerCase();
         bValue = b.username.toLowerCase();
@@ -268,8 +269,18 @@ const Credentials = () => {
     window.open(url, '_blank');
   };
 
-  const handleViewAssignments = (credential) => {
+  const copyPassword = async (password) => {
+    try {
+      await navigator.clipboard.writeText(password);
+      toast.success('Password copied to clipboard');
+    } catch (err) {
+      toast.error('Failed to copy password');
+    }
+  };
+
+  const handleViewAssignments = (credential, tab = 'users') => {
     setSelectedCredential(credential);
+    setInitialTab(tab);
     setShowAssignmentModal(true);
   };
 
@@ -341,11 +352,9 @@ const Credentials = () => {
             <thead>
               <tr>
                 <SortableHeader field="id" align="center">ID</SortableHeader>
-                <SortableHeader field="label">Label</SortableHeader>
-                <SortableHeader field="url">URL</SortableHeader>
+                <SortableHeader field="label">Label & URL</SortableHeader>
                 <SortableHeader field="username">Username</SortableHeader>
-                <th>Password</th>
-                <SortableHeader field="project">Project</SortableHeader>
+                <th>Access</th>
                 <th className="text-center">Actions</th>
               </tr>
             </thead>
@@ -355,66 +364,90 @@ const Credentials = () => {
                   <td className="text-center text-sm text-gray-500">
                     {credential.id}
                   </td>
-                  <td className="font-medium">{credential.label}</td>
                   <td>
-                    <div className="flex items-center">
-                      <span className="truncate max-w-xs">{credential.url}</span>
-                      <button
-                        onClick={() => openUrl(credential.url)}
-                        className="ml-2 text-primary-600 hover:text-primary-800"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
-                  <td>{credential.username}</td>
-                  <td>
-                    <div className="flex items-center">
-                      <span className="font-mono text-sm">
-                        {showPasswords[credential.id] 
-                          ? credential.password 
-                          : '•'.repeat(8)
-                        }
-                      </span>
-                      <button
-                        onClick={() => togglePasswordVisibility(credential.id)}
-                        className="ml-2 text-gray-400 hover:text-gray-600"
-                      >
-                        {showPasswords[credential.id] ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
+                    <div className="space-y-1">
+                      <div className="font-medium flex items-center">
+                        <span>{credential.label}</span>
+                        <a
+                          href={credential.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary-600 hover:text-primary-800 ml-1 relative group"
+                        >
+                          <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                            Open URL
+                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+                          </div>
+                        </a>
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {credential.project?.name || 'No Project'}
+                      </div>
                     </div>
                   </td>
                   <td>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
-                      {credential.project?.name || 'No Project'}
-                    </span>
+                    <div className="flex items-center space-x-2">
+                      <span>{credential.username}</span>
+                      <button
+                        onClick={() => copyPassword(credential.password)}
+                        className="text-primary-600 hover:text-primary-800 relative group"
+                      >
+                        <Key className="h-4 w-4" />
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                          Copy password
+                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+                        </div>
+                      </button>
+                    </div>
                   </td>
-                  <td className="text-center">
-                    <div className="flex space-x-2 justify-center">
+                  <td>
+                    <div className="flex items-center space-x-6 text-sm">
                       <button
                         onClick={() => handleViewAssignments(credential)}
-                        className="text-blue-600 hover:text-blue-800"
-                        title="Manage user and team access"
+                        className="flex items-center space-x-1 text-primary-600 hover:text-primary-800 transition-colors relative group"
                       >
-                        <Users className="h-4 w-4" />
+                        <User className="h-4 w-4" />
+                        <span>{credential.user_count || 0}</span>
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                          Manage user access
+                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+                        </div>
                       </button>
                       <button
+                        onClick={() => handleViewAssignments(credential, 'teams')}
+                        className="flex items-center space-x-1 text-primary-600 hover:text-primary-800 transition-colors relative group"
+                      >
+                        <Users className="h-4 w-4" />
+                        <span>{credential.team_count || 0}</span>
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                          Manage team access
+                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+                        </div>
+                      </button>
+                    </div>
+                  </td>
+                  <td className="text-center">
+                    <div className="flex space-x-4 justify-center">
+                      <button
                         onClick={() => handleEdit(credential)}
-                        className="text-primary-600 hover:text-primary-800"
-                        title="Edit credential"
+                        className="text-primary-600 hover:text-primary-800 relative group"
                       >
                         <Edit className="h-4 w-4" />
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                          Edit credential
+                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+                        </div>
                       </button>
                       <button
                         onClick={() => handleDelete(credential.id)}
-                        className="text-red-600 hover:text-red-800"
-                        title="Delete credential"
+                        className="text-red-600 hover:text-red-800 relative group"
                       >
                         <Trash2 className="h-4 w-4" />
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                          Delete credential
+                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+                        </div>
                       </button>
                     </div>
                   </td>
@@ -571,6 +604,7 @@ const Credentials = () => {
         itemName={selectedCredential?.label}
         assignedUsers={assignedUsers}
         assignedTeams={assignedTeams}
+        initialTab={initialTab}
       />
     </div>
   );

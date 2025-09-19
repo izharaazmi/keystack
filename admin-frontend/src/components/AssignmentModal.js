@@ -11,7 +11,8 @@ const AssignmentModal = ({
   itemId, 
   itemName,
   assignedUsers = [],
-  assignedTeams = []
+  assignedTeams = [],
+  initialTab = 'users'
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTab, setSelectedTab] = useState('users'); // 'users' or 'teams'
@@ -23,11 +24,11 @@ const AssignmentModal = ({
   useEffect(() => {
     if (isOpen) {
       setSearchTerm('');
-      setSelectedTab('users');
+      setSelectedTab(initialTab);
       setSelectedUsers([]);
       setSelectedTeams([]);
     }
-  }, [isOpen]);
+  }, [isOpen, initialTab]);
 
   // Fetch all users
   const { data: allUsers = [] } = useQuery(
