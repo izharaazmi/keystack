@@ -11,11 +11,26 @@ const Profile = () => {
   const queryClient = useQueryClient();
 
   // Fetch current user profile
-  const { data: profileData, isLoading: profileLoading } = useQuery(
+  const { data: profileData, isLoading: profileLoading, error: profileError } = useQuery(
     'profile',
     async () => {
       const response = await api.get('/auth/me');
       return response.data.user;
+    },
+    {
+      retry: (failureCount, error) => {
+        // Don't retry on 429 errors
+        if (error?.response?.status === 429) {
+          return false;
+        }
+        return failureCount < 3;
+      },
+      onError: (error) => {
+        if (error?.response?.status === 429) {
+          const retryAfter = error.response?.data?.retryAfter || '15 minutes';
+          toast.error(`Too many requests. Please wait ${retryAfter} before refreshing.`);
+        }
+      }
     }
   );
 
@@ -32,7 +47,12 @@ const Profile = () => {
         toast.success(data.message || 'Profile updated successfully');
       },
       onError: (error) => {
-        toast.error(error.response?.data?.message || 'Failed to update profile');
+        if (error.response?.status === 429) {
+          const retryAfter = error.response?.data?.retryAfter || '15 minutes';
+          toast.error(`Too many requests. Please wait ${retryAfter} before trying again.`);
+        } else {
+          toast.error(error.response?.data?.message || 'Failed to update profile');
+        }
       }
     }
   );
@@ -68,6 +88,28 @@ const Profile = () => {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
+  if (profileError) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="text-red-600 text-lg font-medium mb-2">Error Loading Profile</div>
+          <div className="text-gray-600 mb-4">
+            {profileError?.response?.status === 429 
+              ? 'Too many requests. Please wait a moment and refresh the page.'
+              : 'Failed to load profile data. Please try again.'
+            }
+          </div>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="btn btn-primary"
+          >
+            Refresh Page
+          </button>
+        </div>
       </div>
     );
   }

@@ -24,7 +24,6 @@ const Credentials = () => {
   const [showPasswords, setShowPasswords] = useState({});
   const [showAssignmentModal, setShowAssignmentModal] = useState(false);
   const [selectedCredential, setSelectedCredential] = useState(null);
-  const [projectInputMode, setProjectInputMode] = useState('select'); // 'select' or 'input'
   const queryClient = useQueryClient();
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm();
@@ -136,17 +135,13 @@ const Credentials = () => {
   );
 
   const onSubmit = (data) => {
-    // Handle project assignment
+    // Handle project assignment - only allow existing projects
     const submitData = { ...data };
     
-    if (projectInputMode === 'input' && data.project_name) {
-      // If creating a new project, we'll let the backend handle it
-      // For now, we'll just send the project name and let the backend create it
-      submitData.project = data.project_name;
-      delete submitData.project_name;
-    } else if (data.project_id) {
-      // If selecting existing project, use project_id
+    if (data.project_id && data.project_id !== '') {
       submitData.project_id = parseInt(data.project_id);
+    } else {
+      submitData.project_id = null;
     }
     
     if (editingCredential) {
@@ -167,9 +162,6 @@ const Credentials = () => {
       description: credential.description || '',
       project_id: credential.project?.id || '',
     });
-    // Set project input mode based on whether the project exists in the list
-    const projectExists = projects?.some(p => p.id === credential.project?.id);
-    setProjectInputMode(projectExists ? 'select' : 'input');
     setShowModal(true);
   };
 
@@ -195,9 +187,6 @@ const Credentials = () => {
     setShowAssignmentModal(true);
   };
 
-  const handleProjectModeToggle = () => {
-    setProjectInputMode(prev => prev === 'select' ? 'input' : 'select');
-  };
 
   if (isLoading) {
     return (
@@ -220,7 +209,6 @@ const Credentials = () => {
           onClick={() => {
             setEditingCredential(null);
             reset();
-            setProjectInputMode('select');
             setShowModal(true);
           }}
           className="btn btn-primary flex items-center"
@@ -371,50 +359,23 @@ const Credentials = () => {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700">Project</label>
-                        <div className="mt-1 flex rounded-md shadow-sm">
-                          {projectInputMode === 'select' ? (
-                            <select
-                              {...register('project_id')}
-                              className="input rounded-r-none w-full"
-                              defaultValue=""
-                            >
-                              <option value="">No Project</option>
-                              {projects?.map((project) => (
-                                <option key={project.id} value={project.id}>
-                                  {project.name}
-                                </option>
-                              ))}
-                            </select>
-                          ) : (
-                            <input
-                              {...register('project_name')}
-                              className="input rounded-r-none"
-                              placeholder="Enter new project name"
-                            />
-                          )}
-                          <button
-                            type="button"
-                            onClick={handleProjectModeToggle}
-                            className="relative -ml-px inline-flex items-center px-3 py-2 border border-gray-300 bg-gray-50 text-gray-500 text-sm hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 rounded-r-md"
-                            title={projectInputMode === 'select' ? 'Enter new project' : 'Select existing project'}
-                          >
-                            {projectInputMode === 'select' ? (
-                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                              </svg>
-                            ) : (
-                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                              </svg>
-                            )}
-                          </button>
-                        </div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Project <span className="text-gray-400 font-normal">(optional)</span>
+                        </label>
+                        <select
+                          {...register('project_id')}
+                          className="input mt-1 w-full"
+                          defaultValue=""
+                        >
+                          <option value="">No Project</option>
+                          {projects?.map((project) => (
+                            <option key={project.id} value={project.id}>
+                              {project.name}
+                            </option>
+                          ))}
+                        </select>
                         <p className="mt-1 text-xs text-gray-500">
-                          {projectInputMode === 'select' 
-                            ? 'Select an existing project or click + to create a new one'
-                            : 'Enter a new project name or click ▼ to select existing'
-                          }
+                          Select an existing project or leave as "No Project"
                         </p>
                       </div>
                     </div>

@@ -30,6 +30,16 @@ api.interceptors.response.use(
 		if (error.response?.status === 401) {
 			localStorage.removeItem('token');
 			window.location.href = '/login';
+		} else if (error.response?.status === 429) {
+			// Handle rate limiting errors
+			const retryAfter = error.response?.data?.retryAfter || '15 minutes';
+			const errorMessage = error.response?.data?.error || 'Too many requests. Please try again later.';
+			console.warn(`Rate limited: ${errorMessage}. Retry after: ${retryAfter}`);
+			
+			// Show user-friendly error message
+			if (window.toast) {
+				window.toast.error(`${errorMessage} Please wait ${retryAfter} before trying again.`);
+			}
 		}
 		return Promise.reject(error);
 	}

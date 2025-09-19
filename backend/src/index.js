@@ -26,19 +26,38 @@ app.use(cors({
 	credentials: true
 }));
 
-// Rate limiting
+// Rate limiting - more lenient for development
+const isDevelopment = process.env.NODE_ENV === 'development';
 const limiter = rateLimit({
-	windowMs: 15 * 60 * 1000, // 15 minutes
-	max: 100 // limit each IP to 100 requests per windowMs
+	windowMs: 1 * 60 * 1000, // 1 minute
+	max: isDevelopment ? 1000 : 100, // More requests allowed in development
+	message: {
+		error: 'Too many requests from this IP, please try again later.',
+		retryAfter: '1 minute'
+	},
+	standardHeaders: true,
+	legacyHeaders: false,
 });
 app.use(limiter);
+
+// Stricter rate limiting for auth endpoints
+const authLimiter = rateLimit({
+	windowMs: 1 * 60 * 1000, // 1 minute
+	max: isDevelopment ? 50 : 20, // Fewer requests for auth endpoints
+	message: {
+		error: 'Too many authentication attempts, please try again later.',
+		retryAfter: '1 minute'
+	},
+	standardHeaders: true,
+	legacyHeaders: false,
+});
 
 // Body parsing middleware
 app.use(express.json({limit: '10mb'}));
 app.use(express.urlencoded({extended: true}));
 
 // Routes
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/credentials', credentialRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/users', userRoutes);

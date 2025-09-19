@@ -15,8 +15,7 @@ const credentialSchema = Joi.object({
 	username: Joi.string().required(),
 	password: Joi.string().required(),
 	description: Joi.string().optional().allow(''),
-	project: Joi.string().optional().allow(''),
-	project_id: Joi.number().integer().positive().optional(),
+	project_id: Joi.number().integer().positive().optional().allow(null),
 	allowedUsers: Joi.array().items(Joi.number().integer().positive()).optional(),
 	allowedGroups: Joi.array().items(Joi.number().integer().positive()).optional()
 });
@@ -173,27 +172,19 @@ router.post('/', auth, async (req, res) => {
       return res.status(400).json({ message: error.details[0].message });
     }
 
-    const { allowedUsers, allowedGroups, project, project_id, ...credentialData } = value;
+    const { allowedUsers, allowedGroups, project_id, ...credentialData } = value;
 
-    // Handle project assignment - prioritize project_id over project string
-    let finalProjectId = project_id;
-    if (!finalProjectId && project) {
-      // If project string is provided, find or create the project
-      const [projectRecord] = await Project.findOrCreate({
-        where: { name: project },
-        defaults: {
-          name: project,
-          description: `Auto-created project: ${project}`,
-          created_by_id: req.user.id,
-          is_active: true
-        }
-      });
-      finalProjectId = projectRecord.id;
+    // Validate project_id if provided
+    if (project_id) {
+      const project = await Project.findByPk(project_id);
+      if (!project) {
+        return res.status(400).json({ message: 'Project not found' });
+      }
     }
 
     const credential = await Credential.create({
       ...credentialData,
-      project_id: finalProjectId || null,
+      project_id: project_id || null,
       created_by_id: req.user.id
     });
 
