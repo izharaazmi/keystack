@@ -442,10 +442,6 @@ const Users = () => {
     );
   });
 
-  const { data: pendingUsers } = useQuery('pendingUsers', async () => {
-    const response = await api.get('/users/pending');
-    return response.data.users;
-  });
 
 
   const activateMutation = useMutation(
@@ -553,7 +549,6 @@ const Users = () => {
     {
       onSuccess: () => {
         queryClient.invalidateQueries('users');
-        queryClient.invalidateQueries('pendingUsers');
         toast.success('User approved successfully');
       },
       onError: (error) => {
@@ -567,7 +562,6 @@ const Users = () => {
     {
       onSuccess: (response) => {
         queryClient.invalidateQueries('users');
-        queryClient.invalidateQueries('pendingUsers');
         toast.success(response.data.message || 'User state updated successfully');
       },
       onError: (error) => {
@@ -866,84 +860,6 @@ const Users = () => {
         </div>
       )}
 
-      {/* Pending Users Section */}
-      {pendingUsers && pendingUsers.length > 0 && (
-        <div className="mt-8">
-          <div className="mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Pending Approvals</h2>
-            <p className="text-sm text-gray-500">
-              Users waiting for admin approval to access the system
-            </p>
-          </div>
-          
-          <div className="card overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Admin</th>
-                    <th>Email Verified</th>
-                    <th>Registered</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pendingUsers.map((user) => (
-                    <tr key={user.id}>
-                      <td className="font-medium">
-                        {user.first_name} {user.last_name}
-                      </td>
-                      <td>{user.email}</td>
-                      <td>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          user.role === 'admin' 
-                            ? 'bg-red-100 text-red-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {user.role}
-                        </span>
-                      </td>
-                      <td>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          user.is_email_verified 
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {user.is_email_verified ? 'Verified' : 'Pending'}
-                        </span>
-                      </td>
-                      <td>
-                        {new Date(user.created_at).toLocaleDateString()}
-                      </td>
-                      <td>
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => approveUserMutation.mutate(user.id)}
-                            disabled={!user.is_email_verified || approveUserMutation.isLoading}
-                            className={`px-3 py-1 text-sm rounded relative group ${
-                              !user.is_email_verified
-                                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                : 'bg-green-100 text-green-700 hover:bg-green-200'
-                            }`}
-                          >
-                            {approveUserMutation.isLoading ? 'Approving...' : 'Approve'}
-                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                              {!user.is_email_verified ? 'User must verify email first' : 'Approve user'}
-                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
-                            </div>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
 
       <TeamAssignmentModal
         isOpen={showTeamModal}

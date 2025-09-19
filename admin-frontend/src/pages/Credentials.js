@@ -6,15 +6,10 @@ import {
 	Search,
 	Edit,
 	Trash2,
-	Eye,
-	EyeOff,
 	ExternalLink,
 	Users,
-	X,
-	Settings,
 	ChevronUp,
 	ChevronDown,
-	Copy,
 	User,
 	Key
 } from 'lucide-react';
@@ -28,7 +23,6 @@ const Credentials = () => {
   const [selectedProject, setSelectedProject] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingCredential, setEditingCredential] = useState(null);
-  const [showPasswords, setShowPasswords] = useState({});
   const [showAssignmentModal, setShowAssignmentModal] = useState(false);
   const [selectedCredential, setSelectedCredential] = useState(null);
   const [assignedUsers, setAssignedUsers] = useState([]);
@@ -137,7 +131,7 @@ const Credentials = () => {
     return filtered;
   }, [credentials, debouncedSearchTerm, sortField, sortDirection]);
 
-  const { data: credentialUsers, isLoading: assignedUsersLoading } = useQuery(
+  const { data: credentialUsers } = useQuery(
     ['credential-users', selectedCredential?.id],
     async () => {
       if (!selectedCredential?.id) return [];
@@ -254,16 +248,6 @@ const Credentials = () => {
     }
   };
 
-  const togglePasswordVisibility = (id) => {
-    setShowPasswords(prev => ({
-      ...prev,
-      [id]: !prev[id]
-    }));
-  };
-
-  const openUrl = (url) => {
-    window.open(url, '_blank');
-  };
 
   const copyPassword = async (password) => {
     try {

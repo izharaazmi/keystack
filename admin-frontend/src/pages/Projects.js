@@ -10,7 +10,6 @@ import {
 	ChevronUp,
 	ChevronDown,
 	Users,
-	Settings,
 	User,
 	Edit,
 	Trash2,

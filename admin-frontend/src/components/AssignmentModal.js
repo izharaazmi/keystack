@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
-import { X, Users, UserPlus, UserMinus, Search, Check, X as XIcon } from 'lucide-react';
+import { X, Users, UserPlus, UserMinus, Search, Check } from 'lucide-react';
 import { api } from '../utils/api';
 import toast from 'react-hot-toast';
 
