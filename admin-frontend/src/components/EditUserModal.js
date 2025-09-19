@@ -19,9 +19,9 @@ const EditUserModal = ({
   const [errors, setErrors] = useState({});
   const [showPasswordFields, setShowPasswordFields] = useState(false);
 
-  // Update form data when user prop changes
+  // Update form data when user prop changes or modal opens
   useEffect(() => {
-    if (user) {
+    if (user && isOpen) {
       setFormData({
         first_name: user.first_name || '',
         last_name: user.last_name || '',
@@ -32,7 +32,7 @@ const EditUserModal = ({
       setErrors({});
       setShowPasswordFields(false);
     }
-  }, [user]);
+  }, [user, isOpen]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

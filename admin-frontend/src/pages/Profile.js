@@ -205,13 +205,15 @@ const Profile = () => {
       </div>
 
       {/* Profile Edit Modal */}
-      <ProfileEditModal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        user={profileData}
-        onUpdate={handleUpdateProfile}
-        isLoading={isLoading}
-      />
+      {profileData && (
+        <ProfileEditModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          user={profileData}
+          onUpdate={handleUpdateProfile}
+          isLoading={isLoading}
+        />
+      )}
     </div>
   );
 };
