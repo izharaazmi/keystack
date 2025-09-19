@@ -1,49 +1,125 @@
-import React, {useState} from 'react';
+import React, {useState, useMemo} from 'react';
 import {useQuery, useMutation, useQueryClient} from 'react-query';
 import {useForm} from 'react-hook-form';
+import {useNavigate} from 'react-router-dom';
 import {
 	Plus,
 	Search,
 	Edit,
 	Trash2,
-	UserMinus,
-	Users
+	Users,
+	Grid3X3,
+	List,
+	ChevronUp,
+	ChevronDown
 } from 'lucide-react';
 import {api} from '../utils/api';
 import toast from 'react-hot-toast';
 
 const Teams = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState(() => {
+    return localStorage.getItem('teams-viewMode') || 'cards';
+  });
   const [showModal, setShowModal] = useState(false);
   const [editingTeam, setEditingTeam] = useState(null);
+  const [sortField, setSortField] = useState('name');
+  const [sortDirection, setSortDirection] = useState('asc');
   const queryClient = useQueryClient();
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm();
 
+  const handleTeamClick = (teamId) => {
+    navigate(`/users?team=${teamId}`);
+  };
+
+  const handleViewModeChange = (mode) => {
+    setViewMode(mode);
+    localStorage.setItem('teams-viewMode', mode);
+  };
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const SortableHeader = ({ field, children, align = 'left' }) => {
+    const alignmentClass = align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : 'text-left';
+    return (
+      <th 
+        className={`cursor-pointer hover:bg-gray-50 select-none ${alignmentClass}`}
+        onClick={() => handleSort(field)}
+      >
+        <div className={`flex items-center space-x-1 ${align === 'center' ? 'justify-center' : align === 'right' ? 'justify-end' : 'justify-start'}`}>
+          <span>{children}</span>
+          {sortField === field && (
+            sortDirection === 'asc' ? 
+              <ChevronUp className="h-4 w-4" /> : 
+              <ChevronDown className="h-4 w-4" />
+          )}
+        </div>
+      </th>
+    );
+  };
+
   const { data: teams, isLoading } = useQuery(
-    ['teams', searchTerm],
+    ['teams'],
     async () => {
       const response = await api.get('/teams');
       return response.data.groups;
     }
   );
 
-  const { data: users } = useQuery('users', async () => {
-    const response = await api.get('/users');
-    return response.data.users;
-  });
+  const filteredTeams = useMemo(() => {
+    if (!teams) return [];
+    
+    let filtered = teams.filter(team =>
+      team.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    // Sort the filtered results
+    filtered.sort((a, b) => {
+      let aValue, bValue;
+      
+      if (sortField === 'name') {
+        aValue = a.name.toLowerCase();
+        bValue = b.name.toLowerCase();
+      } else if (sortField === 'userCount') {
+        aValue = a.userCount || 0;
+        bValue = b.userCount || 0;
+      } else {
+        return 0;
+      }
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return filtered;
+  }, [teams, searchTerm, sortField, sortDirection]);
+
 
   const createMutation = useMutation(
     (data) => api.post('/teams', data),
     {
       onSuccess: () => {
         queryClient.invalidateQueries('teams');
-        setShowModal(false);
-        reset();
+        handleCloseModal();
         toast.success('Team created successfully');
       },
       onError: (error) => {
-        toast.error(error.response?.data?.message || 'Failed to create team');
+        const errorData = error.response?.data;
+        if (errorData?.duplicate) {
+          toast.error(`${errorData.message}\nSimilar team: "${errorData.duplicate}"`);
+        } else {
+          toast.error(errorData?.message || 'Failed to create team');
+        }
       },
     }
   );
@@ -53,13 +129,16 @@ const Teams = () => {
     {
       onSuccess: () => {
         queryClient.invalidateQueries('teams');
-        setShowModal(false);
-        setEditingTeam(null);
-        reset();
+        handleCloseModal();
         toast.success('Team updated successfully');
       },
       onError: (error) => {
-        toast.error(error.response?.data?.message || 'Failed to update team');
+        const errorData = error.response?.data;
+        if (errorData?.duplicate) {
+          toast.error(`${errorData.message}\nSimilar team: "${errorData.duplicate}"`);
+        } else {
+          toast.error(errorData?.message || 'Failed to update team');
+        }
       },
     }
   );
@@ -77,31 +156,6 @@ const Teams = () => {
     }
   );
 
-  const addMemberMutation = useMutation(
-    ({ teamId, userId }) => api.post(`/teams/${teamId}/members`, { userId }),
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries('teams');
-        toast.success('Member added successfully');
-      },
-      onError: (error) => {
-        toast.error(error.response?.data?.message || 'Failed to add member');
-      },
-    }
-  );
-
-  const removeMemberMutation = useMutation(
-    ({ teamId, userId }) => api.delete(`/teams/${teamId}/members/${userId}`),
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries('teams');
-        toast.success('Member removed successfully');
-      },
-      onError: (error) => {
-        toast.error(error.response?.data?.message || 'Failed to remove member');
-      },
-    }
-  );
 
   const onSubmit = (data) => {
     if (editingTeam) {
@@ -121,19 +175,28 @@ const Teams = () => {
     setShowModal(true);
   };
 
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setEditingTeam(null);
+    reset({
+      name: '',
+      description: '',
+      members: []
+    });
+  };
+
   const handleDelete = (id) => {
+    const team = teams?.find(t => t.id === id);
+    if (team?.userCount > 0) {
+      toast.error(`Cannot delete team "${team.name}" because it has ${team.userCount} user(s). Remove all users first.`);
+      return;
+    }
+    
     if (window.confirm('Are you sure you want to delete this team?')) {
       deleteMutation.mutate(id);
     }
   };
 
-  const handleAddMember = (teamId, userId) => {
-    addMemberMutation.mutate({ teamId, userId });
-  };
-
-  const handleRemoveMember = (teamId, userId) => {
-    removeMemberMutation.mutate({ teamId, userId });
-  };
 
   if (isLoading) {
     return (
@@ -152,17 +215,42 @@ const Teams = () => {
             Manage user groups and team memberships
           </p>
         </div>
-        <button
-          onClick={() => {
-            setEditingTeam(null);
-            reset();
-            setShowModal(true);
-          }}
-          className="btn btn-primary flex items-center"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Team
-        </button>
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => handleViewModeChange('cards')}
+              className={`p-2 rounded-md ${
+                viewMode === 'cards'
+                  ? 'bg-primary-100 text-primary-600'
+                  : 'text-gray-400 hover:text-gray-600'
+              }`}
+              title="Card view"
+            >
+              <Grid3X3 className="h-5 w-5" />
+            </button>
+            <button
+              onClick={() => handleViewModeChange('table')}
+              className={`p-2 rounded-md ${
+                viewMode === 'table'
+                  ? 'bg-primary-100 text-primary-600'
+                  : 'text-gray-400 hover:text-gray-600'
+              }`}
+              title="Table view"
+            >
+              <List className="h-5 w-5" />
+            </button>
+          </div>
+          <button
+            onClick={() => {
+              setEditingTeam(null);
+              setShowModal(true);
+            }}
+            className="btn btn-primary flex items-center"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Team
+          </button>
+        </div>
       </div>
 
       {/* Search */}
@@ -170,6 +258,7 @@ const Teams = () => {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input
+            key="search-input"
             type="text"
             placeholder="Search teams..."
             value={searchTerm}
@@ -179,92 +268,167 @@ const Teams = () => {
         </div>
       </div>
 
-      {/* Teams Grid */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {teams?.map((team) => (
-          <div key={team.id} className="card p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-gray-900">{team.name}</h3>
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => handleEdit(team)}
-                  className="text-primary-600 hover:text-primary-800"
-                >
-                  <Edit className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => handleDelete(team.id)}
-                  className="text-red-600 hover:text-red-800"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-            
-            {team.description && (
-              <p className="text-sm text-gray-600 mb-4">{team.description}</p>
-            )}
-            
-            <div className="mb-4">
-              <div className="flex items-center text-sm text-gray-500 mb-2">
-                <Users className="h-4 w-4 mr-1" />
-                {team.members?.length || 0} members
+      {/* Teams Content */}
+      {viewMode === 'cards' ? (
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {filteredTeams?.map((team) => (
+            <div key={team.id} className="card p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-3">
+                  <div className="flex-shrink-0">
+                    <div className="h-10 w-10 rounded-lg bg-primary-100 flex items-center justify-center">
+                      <Users className="h-5 w-5 text-primary-600" />
+                    </div>
+                  </div>
+                  <div>
+                    <h3 
+                      className="text-lg font-medium text-gray-900 cursor-pointer hover:text-primary-600 transition-colors"
+                      onClick={() => handleTeamClick(team.id)}
+                    >
+                      {team.name}
+                    </h3>
+                    <p className="text-sm text-gray-500">Team</p>
+                  </div>
+                </div>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => handleEdit(team)}
+                    className="text-primary-600 hover:text-primary-800"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(team.id)}
+                    disabled={team.userCount > 0}
+                    className={`${
+                      team.userCount > 0 
+                        ? 'text-gray-400 cursor-not-allowed' 
+                        : 'text-red-600 hover:text-red-800'
+                    }`}
+                    title={team.userCount > 0 ? 'Cannot delete team with users' : 'Delete team'}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
               
-              {team.members && team.members.length > 0 && (
-                <div className="space-y-1">
-                  {team.members.slice(0, 3).map((member) => (
-                    <div key={member.id} className="flex items-center justify-between text-sm">
-                      <span className="text-gray-900">
-                        {member.firstName} {member.lastName}
-                      </span>
-                      <button
-                        onClick={() => handleRemoveMember(team.id, member.id)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        <UserMinus className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ))}
-                  {team.members.length > 3 && (
-                    <div className="text-xs text-gray-500">
-                      +{team.members.length - 3} more
-                    </div>
-                  )}
-                </div>
+              {team.description && (
+                <p className="text-sm text-gray-600 mb-4">{team.description}</p>
               )}
-            </div>
-            
-            <div className="border-t pt-4">
-              <select
-                onChange={(e) => {
-                  if (e.target.value) {
-                    handleAddMember(team.id, e.target.value);
-                    e.target.value = '';
+              
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Users className="h-4 w-4 text-gray-400" />
+                  <span className="text-sm text-gray-600">Members</span>
+                </div>
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  (team.userCount || 0) > 0 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-gray-100 text-gray-600'
+                }`}>
+                  {(team.userCount || 0) > 0 
+                    ? `${team.userCount} member${team.userCount === 1 ? '' : 's'}` 
+                    : 'No members'
                   }
-                }}
-                className="w-full text-sm border border-gray-300 rounded px-2 py-1"
-              >
-                <option value="">Add member...</option>
-                {users?.filter(user => 
-                  !team.members?.some(member => member.id === user.id)
-                ).map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.firstName} {user.lastName} ({user.email})
-                  </option>
-                ))}
-              </select>
+                </span>
+              </div>
             </div>
+          ))}
+        </div>
+      ) : (
+        <div className="card overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="table">
+              <thead>
+                <tr>
+                  <SortableHeader field="name">Team</SortableHeader>
+                  <th>Description</th>
+                  <SortableHeader field="userCount" align="center">Members</SortableHeader>
+                  <th className="text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredTeams?.map((team) => (
+                  <tr key={team.id}>
+                    <td>
+                      <div className="flex items-center space-x-3">
+                        <div className="flex-shrink-0">
+                          <div className="h-8 w-8 rounded-lg bg-primary-100 flex items-center justify-center">
+                            <Users className="h-4 w-4 text-primary-600" />
+                          </div>
+                        </div>
+                        <div>
+                          <div 
+                            className="font-medium text-gray-900 cursor-pointer hover:text-primary-600 transition-colors"
+                            onClick={() => handleTeamClick(team.id)}
+                          >
+                            {team.name}
+                          </div>
+                          <div className="text-sm text-gray-500">Team</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="text-sm text-gray-600">
+                        {team.description || 'No description'}
+                      </div>
+                    </td>
+                    <td className="text-center">
+                      <div className="flex items-center space-x-2 justify-center">
+                        <Users className="h-4 w-4 text-gray-400" />
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          (team.userCount || 0) > 0 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          {(team.userCount || 0) > 0 
+                            ? `${team.userCount} member${team.userCount === 1 ? '' : 's'}` 
+                            : 'No members'
+                          }
+                        </span>
+                      </div>
+                    </td>
+                    <td className="text-center">
+                      <div className="flex space-x-2 justify-center">
+                        <button
+                          onClick={() => handleEdit(team)}
+                          className="text-primary-600 hover:text-primary-800"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(team.id)}
+                          disabled={team.userCount > 0}
+                          className={`${
+                            team.userCount > 0 
+                              ? 'text-gray-400 cursor-not-allowed' 
+                              : 'text-red-600 hover:text-red-800'
+                          }`}
+                          title={team.userCount > 0 ? 'Cannot delete team with users' : 'Delete team'}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        ))}
-      </div>
+        </div>
+      )}
 
-      {teams?.length === 0 && (
+      {filteredTeams?.length === 0 && (
         <div className="text-center py-12">
           <Users className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No teams found</h3>
+          <h3 className="mt-2 text-sm font-medium text-gray-900">
+            {searchTerm ? 'No teams found' : 'No teams yet'}
+          </h3>
           <p className="mt-1 text-sm text-gray-500">
-            Get started by creating a new team.
+            {searchTerm 
+              ? 'Try adjusting your search terms.'
+              : 'Get started by creating a new team.'
+            }
           </p>
         </div>
       )}
@@ -273,9 +437,9 @@ const Teams = () => {
       {showModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setShowModal(false)} />
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={handleCloseModal} />
             <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-              <form onSubmit={handleSubmit(onSubmit)}>
+              <form key={editingTeam ? `edit-${editingTeam.id}` : 'add'} onSubmit={handleSubmit(onSubmit)}>
                 <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">
                     {editingTeam ? 'Edit Team' : 'Add New Team'}
@@ -302,21 +466,6 @@ const Teams = () => {
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Members</label>
-                      <select
-                        {...register('members')}
-                        multiple
-                        className="input mt-1"
-                        size={5}
-                      >
-                        {users?.map((user) => (
-                          <option key={user.id} value={user.id}>
-                            {user.firstName} {user.lastName} ({user.email})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
                   </div>
                 </div>
 
@@ -334,7 +483,7 @@ const Teams = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setShowModal(false)}
+                    onClick={handleCloseModal}
                     className="btn btn-secondary sm:w-auto"
                   >
                     Cancel

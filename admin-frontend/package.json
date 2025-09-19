@@ -20,11 +20,11 @@
     "tailwind-merge": "^2.0.0"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "DANGEROUSLY_DISABLE_HOST_CHECK=true react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "dev": "react-scripts start"
+    "dev": "DANGEROUSLY_DISABLE_HOST_CHECK=true react-scripts start"
   },
   "eslintConfig": {
     "extends": [

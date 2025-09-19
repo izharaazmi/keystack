@@ -1,0 +1,6 @@
+---
+description: Use modular approach
+globs:
+alwaysApply: true
+---
+Use separate components, modules and methods wherever suitable. Do not overuse this, but use whenever separation of concern is more suitable.

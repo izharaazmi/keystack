@@ -11,6 +11,7 @@ DROP TABLE IF EXISTS `cp_credential_groups`;
 DROP TABLE IF EXISTS `cp_credential_users`;
 DROP TABLE IF EXISTS `cp_user_groups`;
 DROP TABLE IF EXISTS `cp_credentials`;
+DROP TABLE IF EXISTS `cp_projects`;
 DROP TABLE IF EXISTS `cp_groups`;
 DROP TABLE IF EXISTS `cp_users`;
 
@@ -40,12 +41,28 @@ CREATE TABLE `cp_groups` (
     `id` INT PRIMARY KEY AUTO_INCREMENT,
     `name` VARCHAR(100) NOT NULL,
     `description` TEXT NULL,
-    `created_by_id` INT NOT NULL,
+    `created_by_id` INT NULL,
     `is_active` BOOLEAN DEFAULT TRUE,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
-    FOREIGN KEY (`created_by_id`) REFERENCES `cp_users`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`created_by_id`) REFERENCES `cp_users`(`id`) ON DELETE SET NULL,
+    INDEX `idx_name` (`name`),
+    INDEX `idx_created_by_id` (`created_by_id`),
+    INDEX `idx_is_active` (`is_active`),
+    INDEX `idx_created_at` (`created_at`)
+);
+
+-- Projects table
+CREATE TABLE `cp_projects` (
+    `id` INT PRIMARY KEY AUTO_INCREMENT,
+    `name` VARCHAR(100) NOT NULL UNIQUE,
+    `description` TEXT NULL,
+    `created_by_id` INT NULL,
+    `is_active` BOOLEAN DEFAULT TRUE,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (`created_by_id`) REFERENCES `cp_users`(`id`) ON DELETE SET NULL,
     INDEX `idx_name` (`name`),
     INDEX `idx_created_by_id` (`created_by_id`),
     INDEX `idx_is_active` (`is_active`),
@@ -61,22 +78,21 @@ CREATE TABLE `cp_credentials` (
     `username` VARCHAR(255) NOT NULL,
     `password` VARCHAR(500) NOT NULL,
     `description` TEXT NULL,
-    `project` VARCHAR(100) NULL,
+    `project_id` INT NULL,
     `is_active` BOOLEAN DEFAULT TRUE,
-    `created_by_id` INT NOT NULL,
-    `access_type` ENUM('individual', 'group', 'all') DEFAULT 'individual',
+    `created_by_id` INT NULL,
     `last_used` TIMESTAMP NULL,
     `use_count` INT DEFAULT 0,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
-    FOREIGN KEY (`created_by_id`) REFERENCES `cp_users`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`created_by_id`) REFERENCES `cp_users`(`id`) ON DELETE SET NULL,
+    FOREIGN KEY (`project_id`) REFERENCES `cp_projects`(`id`) ON DELETE SET NULL,
     INDEX `idx_label` (`label`),
     INDEX `idx_url` (`url`(255)),
     INDEX `idx_created_by_id` (`created_by_id`),
-    INDEX `idx_access_type` (`access_type`),
     INDEX `idx_is_active` (`is_active`),
-    INDEX `idx_project` (`project`),
+    INDEX `idx_project_id` (`project_id`),
     INDEX `idx_created_at` (`created_at`)
 );
 
@@ -151,16 +167,27 @@ INSERT INTO `cp_groups` (`name`, `description`, `created_by_id`, `is_active`) VA
 ('Finance Team', 'Finance and accounting team', 1, TRUE),
 ('IT Administration', 'IT administrators and support', 1, TRUE);
 
+-- Insert sample projects
+INSERT INTO `cp_projects` (`name`, `description`, `created_by_id`, `is_active`) VALUES
+('Development', 'Software development and coding projects', 1, TRUE),
+('Infrastructure', 'Infrastructure and DevOps projects', 1, TRUE),
+('Communication', 'Internal and external communication tools', 1, TRUE),
+('Project Management', 'Project tracking and management tools', 1, TRUE),
+('DevOps', 'Development operations and deployment', 1, TRUE),
+('Finance', 'Financial and payment processing systems', 1, TRUE),
+('IT Administration', 'IT administration and system management', 1, TRUE),
+('Sales', 'Sales and customer relationship management', 1, TRUE);
+
 -- Insert sample credentials
-INSERT INTO `cp_credentials` (`label`, `url`, `url_pattern`, `username`, `password`, `description`, `project`, `created_by_id`, `access_type`, `is_active`) VALUES
-('GitHub - Development Team', 'https://github.com', 'github.com/*', 'dev-team@company.com', 'GitHubDev2024!', 'Main GitHub account for development team', 'Development', 1, 'group', TRUE),
-('AWS Production Environment', 'https://console.aws.amazon.com', 'console.aws.amazon.com/*', 'aws-admin@company.com', 'AWSProd2024!Secure', 'AWS production environment access', 'Infrastructure', 1, 'individual', TRUE),
-('Company Slack', 'https://company.slack.com', 'company.slack.com/*', 'team@company.com', 'SlackTeam2024!', 'Main company Slack workspace', 'Communication', 1, 'all', TRUE),
-('JIRA - Project Management', 'https://company.atlassian.net', 'company.atlassian.net/*', 'pm@company.com', 'JiraPM2024!', 'Project management and issue tracking', 'Project Management', 1, 'group', TRUE),
-('Docker Hub Registry', 'https://hub.docker.com', 'hub.docker.com/*', 'docker-team@company.com', 'DockerHub2024!', 'Container registry access', 'DevOps', 1, 'group', TRUE),
-('Stripe Dashboard', 'https://dashboard.stripe.com', 'dashboard.stripe.com/*', 'payments@company.com', 'StripePay2024!', 'Payment processing dashboard', 'Finance', 1, 'individual', TRUE),
-('Google Workspace Admin', 'https://admin.google.com', 'admin.google.com/*', 'admin@company.com', 'GoogleAdmin2024!', 'Google Workspace administration', 'IT Administration', 1, 'individual', TRUE),
-('Salesforce CRM', 'https://company.salesforce.com', 'company.salesforce.com/*', 'sales@company.com', 'Salesforce2024!', 'Customer relationship management', 'Sales', 1, 'group', TRUE);
+INSERT INTO `cp_credentials` (`label`, `url`, `url_pattern`, `username`, `password`, `description`, `project_id`, `created_by_id`, `is_active`) VALUES
+('GitHub - Development Team', 'https://github.com', 'github.com/*', 'dev-team@company.com', 'GitHubDev2024!', 'Main GitHub account for development team', 1, 1, TRUE),
+('AWS Production Environment', 'https://console.aws.amazon.com', 'console.aws.amazon.com/*', 'aws-admin@company.com', 'AWSProd2024!Secure', 'AWS production environment access', 2, 1, TRUE),
+('Company Slack', 'https://company.slack.com', 'company.slack.com/*', 'team@company.com', 'SlackTeam2024!', 'Main company Slack workspace', 3, 1, TRUE),
+('JIRA - Project Management', 'https://company.atlassian.net', 'company.atlassian.net/*', 'pm@company.com', 'JiraPM2024!', 'Project management and issue tracking', 4, 1, TRUE),
+('Docker Hub Registry', 'https://hub.docker.com', 'hub.docker.com/*', 'docker-team@company.com', 'DockerHub2024!', 'Container registry access', 5, 1, TRUE),
+('Stripe Dashboard', 'https://dashboard.stripe.com', 'dashboard.stripe.com/*', 'payments@company.com', 'StripePay2024!', 'Payment processing dashboard', 6, 1, TRUE),
+('Google Workspace Admin', 'https://admin.google.com', 'admin.google.com/*', 'admin@company.com', 'GoogleAdmin2024!', 'Google Workspace administration', 7, 1, TRUE),
+('Salesforce CRM', 'https://company.salesforce.com', 'company.salesforce.com/*', 'sales@company.com', 'Salesforce2024!', 'Customer relationship management', 8, 1, TRUE);
 
 -- Assign users to groups
 INSERT INTO `cp_user_groups` (`user_id`, `group_id`) VALUES
@@ -189,6 +216,7 @@ INSERT INTO `cp_credential_users` (`credential_id`, `user_id`) VALUES
 SELECT 'Database initialization completed successfully!' as status;
 SELECT COUNT(*) as `total_users` FROM `cp_users`;
 SELECT COUNT(*) as `total_groups` FROM `cp_groups`;
+SELECT COUNT(*) as `total_projects` FROM `cp_projects`;
 SELECT COUNT(*) as `total_credentials` FROM `cp_credentials`;
 SELECT COUNT(*) as `total_user_groups` FROM `cp_user_groups`;
 SELECT COUNT(*) as `total_credential_users` FROM `cp_credential_users`;

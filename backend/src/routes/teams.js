@@ -1,7 +1,9 @@
 import express from 'express';
 import Joi from 'joi';
+import {Op} from 'sequelize';
 import {Group, User, UserGroup} from '../models/index.js';
 import {auth, adminAuth} from '../middleware/auth.js';
+import {normalizeName, areNamesSimilar, findDuplicates} from '../utils/nameNormalizer.js';
 
 const router = express.Router();
 
@@ -16,19 +18,22 @@ const groupSchema = Joi.object({
 router.get('/', auth, async (req, res) => {
   try {
     const groups = await Group.findAll({
-      where: { isActive: true },
-      include: [
-        { model: User, as: 'Users', through: { attributes: [] } }
-      ],
+      where: { is_active: true },
       order: [['created_at', 'DESC']]
     });
 
-    // Get creator information for each group
+    // Get creator information and user count for each group
     for (let group of groups) {
-      const creator = await User.findByPk(group.createdById, {
-        attributes: ['firstName', 'lastName', 'email']
+      const creator = await User.findByPk(group.created_by_id, {
+        attributes: ['first_name', 'last_name', 'email']
       });
       group.dataValues.createdBy = creator;
+
+      // Get user count for this group
+      const userCount = await UserGroup.count({
+        where: { groupId: group.id }
+      });
+      group.dataValues.userCount = userCount;
     }
 
     res.json({ groups });
@@ -46,36 +51,35 @@ router.post('/', auth, async (req, res) => {
       return res.status(400).json({ message: error.details[0].message });
     }
 
-    const { members, ...groupData } = value;
-
-    const group = await Group.create({
-      ...groupData,
-      createdById: req.user.id
+    // Check for duplicate team names (including similar variations)
+    const existingGroups = await Group.findAll({
+      where: { is_active: true },
+      attributes: ['name']
     });
 
-    // Add members to group
-    if (members && members.length > 0) {
-      await UserGroup.bulkCreate(
-        members.map(userId => ({
-          groupId: group.id,
-          userId
-        }))
-      );
+    const existingNames = existingGroups.map(group => group.name);
+    const duplicates = findDuplicates(value.name, existingNames);
+
+    if (duplicates.length > 0) {
+      return res.status(400).json({ 
+        message: 'A team with a similar name already exists',
+        duplicate: duplicates[0],
+        suggestion: `Consider using a different name. Similar team: "${duplicates[0]}"`
+      });
     }
 
-    const groupWithAssociations = await Group.findByPk(group.id, {
-      include: [
-        { model: User, as: 'Users', through: { attributes: [] } }
-      ]
+    const group = await Group.create({
+      ...value,
+      created_by_id: req.user.id
     });
 
     // Get creator information
-    const creator = await User.findByPk(group.createdById, {
-      attributes: ['firstName', 'lastName', 'email']
+    const creator = await User.findByPk(group.created_by_id, {
+      attributes: ['first_name', 'last_name', 'email']
     });
-    groupWithAssociations.dataValues.createdBy = creator;
+    group.dataValues.createdBy = creator;
 
-    res.status(201).json({ group: groupWithAssociations });
+    res.status(201).json({ group });
   } catch (error) {
     console.error('Create group error:', error);
     if (error.name === 'SequelizeUniqueConstraintError') {
@@ -104,8 +108,30 @@ router.put('/:id', auth, async (req, res) => {
     }
 
     // Check if user can update this group
-    if (group.createdById !== req.user.id && req.user.role !== 'admin') {
+    if (group.created_by_id !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Not authorized to update this group' });
+    }
+
+    // Check for duplicate team names (excluding current team)
+    if (groupData.name && groupData.name !== group.name) {
+      const existingGroups = await Group.findAll({
+        where: { 
+          is_active: true,
+          id: { [Op.ne]: id } // Exclude current team
+        },
+        attributes: ['name']
+      });
+
+      const existingNames = existingGroups.map(g => g.name);
+      const duplicates = findDuplicates(groupData.name, existingNames);
+
+      if (duplicates.length > 0) {
+        return res.status(400).json({ 
+          message: 'A team with a similar name already exists',
+          duplicate: duplicates[0],
+          suggestion: `Consider using a different name. Similar team: "${duplicates[0]}"`
+        });
+      }
     }
 
     await group.update(groupData);
@@ -130,8 +156,8 @@ router.put('/:id', auth, async (req, res) => {
     });
 
     // Get creator information
-    const creator = await User.findByPk(updatedGroup.createdById, {
-      attributes: ['firstName', 'lastName', 'email']
+    const creator = await User.findByPk(updatedGroup.created_by_id, {
+      attributes: ['first_name', 'last_name', 'email']
     });
     updatedGroup.dataValues.createdBy = creator;
 
@@ -157,11 +183,11 @@ router.delete('/:id', auth, async (req, res) => {
     }
 
     // Check if user can delete this group
-    if (group.createdById !== req.user.id && req.user.role !== 'admin') {
+    if (group.created_by_id !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Not authorized to delete this group' });
     }
 
-    await group.update({ isActive: false });
+    await group.update({ is_active: false });
 
     res.json({ message: 'Group deleted successfully' });
   } catch (error) {
@@ -186,7 +212,7 @@ router.post('/:id/members', auth, async (req, res) => {
     }
 
     // Check if user can modify this group
-    if (group.createdById !== req.user.id && req.user.role !== 'admin') {
+    if (group.created_by_id !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Not authorized to modify this group' });
     }
 
@@ -214,8 +240,8 @@ router.post('/:id/members', auth, async (req, res) => {
     });
 
     // Get creator information
-    const creator = await User.findByPk(groupWithAssociations.createdById, {
-      attributes: ['firstName', 'lastName', 'email']
+    const creator = await User.findByPk(groupWithAssociations.created_by_id, {
+      attributes: ['first_name', 'last_name', 'email']
     });
     groupWithAssociations.dataValues.createdBy = creator;
 
@@ -237,7 +263,7 @@ router.delete('/:id/members/:userId', auth, async (req, res) => {
     }
 
     // Check if user can modify this group
-    if (group.createdById !== req.user.id && req.user.role !== 'admin') {
+    if (group.created_by_id !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Not authorized to modify this group' });
     }
 
@@ -252,8 +278,8 @@ router.delete('/:id/members/:userId', auth, async (req, res) => {
     });
 
     // Get creator information
-    const creator = await User.findByPk(groupWithAssociations.createdById, {
-      attributes: ['firstName', 'lastName', 'email']
+    const creator = await User.findByPk(groupWithAssociations.created_by_id, {
+      attributes: ['first_name', 'last_name', 'email']
     });
     groupWithAssociations.dataValues.createdBy = creator;
 
@@ -280,7 +306,7 @@ router.post('/:id/batch-add-members', auth, async (req, res) => {
 		}
 
 		// Check if user can modify this group
-		if (group.createdById !== req.user.id && req.user.role !== 'admin') {
+		if (group.created_by_id !== req.user.id && req.user.role !== 'admin') {
 			return res.status(403).json({message: 'Not authorized to modify this group'});
 		}
 
@@ -321,8 +347,8 @@ router.post('/:id/batch-add-members', auth, async (req, res) => {
 		});
 
 		// Get creator information
-		const creator = await User.findByPk(groupWithAssociations.createdById, {
-			attributes: ['firstName', 'lastName', 'email']
+		const creator = await User.findByPk(groupWithAssociations.created_by_id, {
+			attributes: ['first_name', 'last_name', 'email']
 		});
 		groupWithAssociations.dataValues.createdBy = creator;
 

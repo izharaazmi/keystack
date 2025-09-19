@@ -129,15 +129,15 @@ const Dashboard = () => {
                   {stats.users.recentUsers.map((user) => (
                     <tr key={user.email}>
                       <td className="font-medium">
-                        {user.firstName} {user.lastName}
+                        {user.first_name} {user.last_name}
                       </td>
                       <td>{user.email}</td>
                       <td>
-                        {new Date(user.createdAt).toLocaleDateString()}
+                        {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
                       </td>
                       <td>
-                        {user.lastLogin 
-                          ? new Date(user.lastLogin).toLocaleDateString()
+                        {user.last_login 
+                          ? new Date(user.last_login).toLocaleDateString()
                           : 'Never'
                         }
                       </td>

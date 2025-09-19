@@ -1,6 +1,7 @@
 import express from 'express';
 import Joi from 'joi';
 import {Op} from 'sequelize';
+import {sequelize} from '../config/database.js';
 import {User, Group, UserGroup} from '../models/index.js';
 import {auth, adminAuth} from '../middleware/auth.js';
 
@@ -8,24 +9,33 @@ const router = express.Router();
 
 // Validation schemas
 const updateUserSchema = Joi.object({
-	firstName: Joi.string().optional(),
-	lastName: Joi.string().optional(),
+	first_name: Joi.string().optional(),
+	last_name: Joi.string().optional(),
 	email: Joi.string().email().optional(),
 	role: Joi.string().valid('admin', 'user').optional(),
-	isActive: Joi.boolean().optional()
+	is_active: Joi.boolean().optional()
 });
 
 // Get all users (admin only)
 router.get('/', adminAuth, async (req, res) => {
   try {
-    const { search, role, isActive } = req.query;
+    const { 
+      search, 
+      role, 
+      is_active, 
+      team_id, 
+      sort_field = 'created_at', 
+      sort_direction = 'desc',
+      page = 1,
+      limit = 50
+    } = req.query;
     
     let whereClause = {};
     
     if (search) {
       whereClause[Op.or] = [
-        { firstName: { [Op.like]: `%${search}%` } },
-        { lastName: { [Op.like]: `%${search}%` } },
+        { first_name: { [Op.like]: `%${search}%` } },
+        { last_name: { [Op.like]: `%${search}%` } },
         { email: { [Op.like]: `%${search}%` } }
       ];
     }
@@ -34,17 +44,101 @@ router.get('/', adminAuth, async (req, res) => {
       whereClause.role = role;
     }
     
-    if (isActive !== undefined) {
-      whereClause.isActive = isActive === 'true';
+    if (is_active !== undefined) {
+      whereClause.is_active = is_active === 'true';
     }
 
-    const users = await User.findAll({
+    let includeClause = [];
+    
+    // If team_id is provided, filter users by team membership
+    if (team_id) {
+      includeClause.push({
+        model: Group,
+        as: 'Groups',
+        through: { attributes: [] },
+        where: { id: team_id },
+        required: true
+      });
+    }
+
+    // Define valid sort fields and their database column mappings
+    const validSortFields = {
+      'first_name': 'first_name',
+      'last_name': 'last_name',
+      'email': 'email',
+      'role': 'role',
+      'is_active': 'is_active',
+      'created_at': 'created_at',
+      'last_login': 'last_login',
+      'team_count': 'team_count'
+    };
+
+    const dbSortField = validSortFields[sort_field] || 'created_at';
+    const sortOrder = sort_direction.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
+    let orderClause;
+    if (sort_field === 'team_count') {
+      // For team count, we need to order by the count of associated groups
+      orderClause = [
+        [sequelize.literal('(SELECT COUNT(*) FROM cp_user_groups WHERE user_id = User.id)'), sortOrder]
+      ];
+    } else {
+      orderClause = [[dbSortField, sortOrder]];
+    }
+
+    // Parse pagination parameters
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    const offset = (pageNum - 1) * limitNum;
+
+    // Get total count for pagination
+    const totalCount = await User.count({
       where: whereClause,
-      attributes: { exclude: ['password', 'emailVerificationToken'] },
-      order: [['created_at', 'DESC']]
+      include: includeClause.length > 0 ? includeClause : undefined,
+      distinct: true
     });
 
-    res.json({ users });
+    // Get paginated users
+    const users = await User.findAll({
+      where: whereClause,
+      include: [
+        ...includeClause,
+        {
+          model: Group,
+          as: 'Groups',
+          through: { attributes: [] },
+          attributes: ['id', 'name'],
+          required: false
+        }
+      ],
+      attributes: { exclude: ['password', 'emailVerificationToken'] },
+      order: orderClause,
+      limit: limitNum,
+      offset: offset
+    });
+
+    // Add team count to each user
+    const usersWithTeamCount = users.map(user => ({
+      ...user.toJSON(),
+      team_count: user.Groups ? user.Groups.length : 0
+    }));
+
+    // Calculate pagination info
+    const totalPages = Math.ceil(totalCount / limitNum);
+    const hasNextPage = pageNum < totalPages;
+    const hasPrevPage = pageNum > 1;
+
+    res.json({ 
+      users: usersWithTeamCount,
+      pagination: {
+        currentPage: pageNum,
+        totalPages,
+        totalCount,
+        limit: limitNum,
+        hasNextPage,
+        hasPrevPage
+      }
+    });
   } catch (error) {
     console.error('Get users error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -97,7 +191,7 @@ router.put('/:id', auth, async (req, res) => {
     // Non-admin users cannot change their role or active status
     if (req.user.role !== 'admin') {
       delete value.role;
-      delete value.isActive;
+      delete value.is_active;
     }
 
     const user = await User.findByPk(id);
@@ -106,11 +200,11 @@ router.put('/:id', auth, async (req, res) => {
     }
 
     // Prevent deactivating the last remaining admin
-    if (value.isActive === false && user.role === 'admin') {
+    if (value.is_active === false && user.role === 'admin') {
       const activeAdminCount = await User.count({
         where: {
           role: 'admin',
-          isActive: true
+          is_active: true
         }
       });
 
@@ -123,7 +217,7 @@ router.put('/:id', auth, async (req, res) => {
 
     // If email is being changed, reset email verification
     if (value.email && value.email !== user.email) {
-      value.isEmailVerified = false;
+      value.is_email_verified = false;
       value.emailVerificationToken = user.generateEmailVerificationToken();
     }
 
@@ -162,7 +256,7 @@ router.patch('/:id/deactivate', adminAuth, async (req, res) => {
       const activeAdminCount = await User.count({
         where: {
           role: 'admin',
-          isActive: true
+          is_active: true
         }
       });
 
@@ -173,7 +267,7 @@ router.patch('/:id/deactivate', adminAuth, async (req, res) => {
       }
     }
 
-    await user.update({ isActive: false });
+    await user.update({ is_active: false });
 
     res.json({ message: 'User deactivated successfully' });
   } catch (error) {
@@ -192,7 +286,7 @@ router.patch('/:id/activate', adminAuth, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    await user.update({ isActive: true });
+    await user.update({ is_active: true });
 
     res.json({ message: 'User activated successfully' });
   } catch (error) {
@@ -205,13 +299,13 @@ router.patch('/:id/activate', adminAuth, async (req, res) => {
 router.get('/stats/overview', adminAuth, async (req, res) => {
   try {
     const totalUsers = await User.count();
-    const activeUsers = await User.count({ where: { isActive: true } });
-    const verifiedUsers = await User.count({ where: { isEmailVerified: true } });
+    const activeUsers = await User.count({ where: { is_active: true } });
+    const verifiedUsers = await User.count({ where: { is_email_verified: true } });
     const adminUsers = await User.count({ where: { role: 'admin' } });
 
     const recentUsers = await User.findAll({
-      where: { isActive: true },
-      attributes: ['firstName', 'lastName', 'email', 'created_at', 'lastLogin'],
+      where: { is_active: true },
+      attributes: ['first_name', 'last_name', 'email', 'created_at', 'last_login'],
       order: [['created_at', 'DESC']],
       limit: 5
     });
@@ -268,10 +362,10 @@ router.get('/pending', adminAuth, async (req, res) => {
   try {
     const pendingUsers = await User.findAll({
       where: { 
-        isActive: false,
-        isEmailVerified: true // Only show users who have verified their email
+        is_active: false,
+        is_email_verified: true // Only show users who have verified their email
       },
-      attributes: { exclude: ['password', 'emailVerificationToken'] },
+      attributes: { exclude: ['password', 'email_verification_token'] },
       order: [['created_at', 'ASC']]
     });
 
@@ -292,15 +386,15 @@ router.patch('/:id/approve', adminAuth, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    if (user.isActive) {
+    if (user.is_active) {
       return res.status(400).json({ message: 'User is already approved' });
     }
 
-    if (!user.isEmailVerified) {
+    if (!user.is_email_verified) {
       return res.status(400).json({ message: 'User must verify their email before approval' });
     }
 
-    await user.update({ isActive: true });
+    await user.update({ is_active: true });
 
     res.json({ message: 'User approved successfully' });
   } catch (error) {

@@ -9,6 +9,7 @@ import authRoutes from './routes/auth.js';
 import credentialRoutes from './routes/credentials.js';
 import teamRoutes from './routes/teams.js';
 import userRoutes from './routes/users.js';
+import projectRoutes from './routes/projects.js';
 
 dotenv.config();
 
@@ -38,6 +39,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/credentials', credentialRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/projects', projectRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

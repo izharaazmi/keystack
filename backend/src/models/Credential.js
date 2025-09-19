@@ -18,10 +18,9 @@ const Credential = sequelize.define('Credential', {
 			isUrl: true
 		}
 	},
-	urlPattern: {
+	url_pattern: {
 		type: DataTypes.STRING,
-		allowNull: true,
-		field: 'url_pattern'
+		allowNull: true
 	},
 	username: {
 		type: DataTypes.STRING,
@@ -35,38 +34,33 @@ const Credential = sequelize.define('Credential', {
 		type: DataTypes.TEXT,
 		allowNull: true
 	},
-	project: {
-		type: DataTypes.STRING,
-		defaultValue: 'default'
-	},
-	isActive: {
-		type: DataTypes.BOOLEAN,
-		defaultValue: true,
-		field: 'is_active'
-	},
-	createdById: {
+	project_id: {
 		type: DataTypes.INTEGER,
-		allowNull: false,
-		field: 'created_by_id',
+		allowNull: true,
+		references: {
+			model: 'cp_projects',
+			key: 'id'
+		}
+	},
+	is_active: {
+		type: DataTypes.BOOLEAN,
+		defaultValue: true
+	},
+	created_by_id: {
+		type: DataTypes.INTEGER,
+		allowNull: true,
 		references: {
 			model: 'cp_users',
 			key: 'id'
 		}
 	},
-	accessType: {
-		type: DataTypes.ENUM('individual', 'group', 'all'),
-		defaultValue: 'individual',
-		field: 'access_type'
-	},
-	lastUsed: {
+	last_used: {
 		type: DataTypes.DATE,
-		allowNull: true,
-		field: 'last_used'
+		allowNull: true
 	},
-	useCount: {
+	use_count: {
 		type: DataTypes.INTEGER,
-		defaultValue: 0,
-		field: 'use_count'
+		defaultValue: 0
 	}
 }, {
 	tableName: 'cp_credentials'

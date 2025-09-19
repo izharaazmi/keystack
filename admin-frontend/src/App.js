@@ -7,6 +7,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Credentials from './pages/Credentials';
+import Projects from './pages/Projects';
 import Users from './pages/Users';
 import Teams from './pages/Teams';
 import Layout from './components/Layout';
@@ -39,6 +40,7 @@ function App() {
 								<Route index element={<Navigate to="/dashboard" replace />} />
 								<Route path="dashboard" element={<Dashboard />} />
 								<Route path="credentials" element={<Credentials />} />
+								<Route path="projects" element={<Projects />} />
 								<Route path="users" element={<Users />} />
 								<Route path="teams" element={<Teams />} />
 							</Route>

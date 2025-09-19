@@ -1,6 +1,7 @@
 import User from './User.js';
 import Credential from './Credential.js';
 import Group from './Group.js';
+import Project from './Project.js';
 import UserGroup from './UserGroup.js';
 import CredentialUser from './CredentialUser.js';
 import CredentialGroup from './CredentialGroup.js';
@@ -16,16 +17,24 @@ Credential.belongsToMany(Group, {through: CredentialGroup, foreignKey: 'credenti
 Group.belongsToMany(Credential, {through: CredentialGroup, foreignKey: 'groupId', otherKey: 'credentialId'});
 
 // Creator relationships
-User.hasMany(Credential, {foreignKey: 'createdById', as: 'createdCredentials'});
-Credential.belongsTo(User, {foreignKey: 'createdById', as: 'createdBy'});
+User.hasMany(Credential, {foreignKey: 'created_by_id', as: 'createdCredentials'});
+Credential.belongsTo(User, {foreignKey: 'created_by_id', as: 'createdBy'});
 
-User.hasMany(Group, {foreignKey: 'createdById', as: 'createdGroups'});
-Group.belongsTo(User, {foreignKey: 'createdById', as: 'createdBy'});
+User.hasMany(Group, {foreignKey: 'created_by_id', as: 'createdGroups'});
+Group.belongsTo(User, {foreignKey: 'created_by_id', as: 'createdBy'});
+
+User.hasMany(Project, {foreignKey: 'created_by_id', as: 'createdProjects'});
+Project.belongsTo(User, {foreignKey: 'created_by_id', as: 'createdBy'});
+
+// Project relationships
+Project.hasMany(Credential, {foreignKey: 'project_id', as: 'credentials'});
+Credential.belongsTo(Project, {foreignKey: 'project_id', as: 'project'});
 
 export {
 	User,
 	Credential,
 	Group,
+	Project,
 	UserGroup,
 	CredentialUser,
 	CredentialGroup

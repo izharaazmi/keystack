@@ -1,14 +1,14 @@
 import {DataTypes} from 'sequelize';
 import {sequelize} from '../config/database.js';
 
-const Group = sequelize.define('Group', {
+const Project = sequelize.define('Project', {
 	id: {
 		type: DataTypes.INTEGER,
 		primaryKey: true,
 		autoIncrement: true
 	},
 	name: {
-		type: DataTypes.STRING,
+		type: DataTypes.STRING(100),
 		allowNull: false,
 		unique: true
 	},
@@ -29,7 +29,7 @@ const Group = sequelize.define('Group', {
 		defaultValue: true
 	}
 }, {
-	tableName: 'cp_groups'
+	tableName: 'cp_projects'
 });
 
-export default Group;
+export default Project;

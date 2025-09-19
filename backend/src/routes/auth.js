@@ -11,8 +11,8 @@ const router = express.Router();
 const registerSchema = Joi.object({
 	email: Joi.string().email().required(),
 	password: Joi.string().min(6).required(),
-	firstName: Joi.string().required(),
-	lastName: Joi.string().required(),
+	first_name: Joi.string().required(),
+	last_name: Joi.string().required(),
 	role: Joi.string().valid('admin', 'user').optional()
 });
 
@@ -29,7 +29,7 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: error.details[0].message });
     }
 
-    const { email, password, firstName, lastName, role } = value;
+    const { email, password, first_name, last_name, role } = value;
 
     // Check if user already exists
     const existingUser = await User.findOne({ where: { email } });
@@ -55,11 +55,11 @@ router.post('/register', async (req, res) => {
     const user = await User.create({
       email,
       password,
-      firstName,
-      lastName,
+      first_name,
+      last_name,
       role: assignedRole,
-      isEmailVerified: isFirstUser, // Skip email verification for first user
-      isActive: isFirstUser // First user is automatically active, others need approval
+      is_email_verified: isFirstUser, // Skip email verification for first user
+      is_active: isFirstUser // First user is automatically active, others need approval
     });
 
     // Generate email verification token
@@ -115,12 +115,12 @@ router.post('/login', async (req, res) => {
     }
 
     // Check if email is verified
-    if (!user.isEmailVerified) {
+    if (!user.is_email_verified) {
       return res.status(400).json({ message: 'Please verify your email before logging in' });
     }
 
     // Check if account is active
-    if (!user.isActive) {
+    if (!user.is_active) {
       return res.status(400).json({ message: 'Account is deactivated' });
     }
 
@@ -136,7 +136,7 @@ router.post('/login', async (req, res) => {
     }
 
     // Update last login
-    user.lastLogin = new Date();
+    user.last_login = new Date();
     await user.save();
 
     // Generate JWT token
@@ -152,8 +152,8 @@ router.post('/login', async (req, res) => {
       user: {
         id: user.id,
         email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
+        first_name: user.first_name,
+        last_name: user.last_name,
         role: user.role
       }
     });
@@ -180,12 +180,12 @@ router.post('/extension-login', async (req, res) => {
     }
 
     // Check if email is verified
-    if (!user.isEmailVerified) {
+    if (!user.is_email_verified) {
       return res.status(400).json({ message: 'Please verify your email before logging in' });
     }
 
     // Check if account is active
-    if (!user.isActive) {
+    if (!user.is_active) {
       return res.status(400).json({ message: 'Account is pending admin approval' });
     }
 
@@ -196,7 +196,7 @@ router.post('/extension-login', async (req, res) => {
     }
 
     // Update last login
-    user.lastLogin = new Date();
+    user.last_login = new Date();
     await user.save();
 
     // Generate JWT token
@@ -212,10 +212,10 @@ router.post('/extension-login', async (req, res) => {
       user: {
         id: user.id,
         email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
+        first_name: user.first_name,
+        last_name: user.last_name,
         role: user.role,
-        isActive: user.isActive
+        is_active: user.is_active
       }
     });
   } catch (error) {
@@ -234,7 +234,7 @@ router.get('/verify-email/:token', async (req, res) => {
       return res.status(400).json({ message: 'Invalid or expired verification token' });
     }
 
-    user.isEmailVerified = true;
+    user.is_email_verified = true;
     user.emailVerificationToken = null;
     await user.save();
 
@@ -259,7 +259,7 @@ router.post('/resend-verification', async (req, res) => {
       return res.status(400).json({ message: 'User not found' });
     }
 
-    if (user.isEmailVerified) {
+    if (user.is_email_verified) {
       return res.status(400).json({ message: 'Email already verified' });
     }
 
@@ -282,10 +282,10 @@ router.get('/me', auth, async (req, res) => {
       user: {
         id: req.user.id,
         email: req.user.email,
-        firstName: req.user.firstName,
-        lastName: req.user.lastName,
+        first_name: req.user.first_name,
+        last_name: req.user.last_name,
         role: req.user.role,
-        isEmailVerified: req.user.isEmailVerified
+        is_email_verified: req.user.is_email_verified
       }
     });
   } catch (error) {

@@ -3,6 +3,7 @@ import {Outlet, Link, useLocation} from 'react-router-dom';
 import {
 	LayoutDashboard,
 	Key,
+	Folder,
 	Users,
 	UserCheck,
 	Menu,
@@ -19,6 +20,7 @@ const Layout = () => {
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Credentials', href: '/credentials', icon: Key },
+    { name: 'Projects', href: '/projects', icon: Folder },
     { name: 'Users', href: '/users', icon: Users },
     { name: 'Teams', href: '/teams', icon: UserCheck },
   ];
@@ -98,7 +100,7 @@ const Layout = () => {
           <div className="flex-shrink-0 flex border-t border-gray-200 p-4">
             <div className="flex items-center">
               <div className="ml-3">
-                <p className="text-sm font-medium text-gray-700">{user?.firstName} {user?.lastName}</p>
+                <p className="text-sm font-medium text-gray-700">{user?.first_name} {user?.last_name}</p>
                 <p className="text-xs text-gray-500">{user?.email}</p>
               </div>
             </div>

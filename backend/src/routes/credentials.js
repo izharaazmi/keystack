@@ -3,6 +3,7 @@ import Joi from 'joi';
 import {Op} from 'sequelize';
 import {Credential, User, Group, CredentialUser, CredentialGroup, UserGroup} from '../models/index.js';
 import {auth, adminAuth} from '../middleware/auth.js';
+import {sequelize} from '../config/database.js';
 
 const router = express.Router();
 
@@ -10,12 +11,11 @@ const router = express.Router();
 const credentialSchema = Joi.object({
 	label: Joi.string().required(),
 	url: Joi.string().uri().required(),
-	urlPattern: Joi.string().optional().allow(''),
+	url_pattern: Joi.string().optional().allow(''),
 	username: Joi.string().required(),
 	password: Joi.string().required(),
 	description: Joi.string().optional().allow(''),
 	project: Joi.string().optional().allow(''),
-	accessType: Joi.string().valid('individual', 'group', 'all').default('individual'),
 	allowedUsers: Joi.array().items(Joi.number().integer().positive()).optional(),
 	allowedGroups: Joi.array().items(Joi.number().integer().positive()).optional()
 });
@@ -32,47 +32,34 @@ router.get('/', auth, async (req, res) => {
     });
     const groupIds = userGroups.map(ug => ug.groupId);
 
+    // Get individual user access
+    const userCredentialIds = await CredentialUser.findAll({
+      where: { userId },
+      attributes: ['credentialId']
+    }).then(rows => rows.map(row => row.credentialId));
+
+    // Get group access
+    let groupCredentialIds = [];
+    if (groupIds.length > 0) {
+      groupCredentialIds = await CredentialGroup.findAll({
+        where: { groupId: { [Op.in]: groupIds } },
+        attributes: ['credentialId']
+      }).then(rows => rows.map(row => row.credentialId));
+    }
+
+    // Combine all accessible credential IDs
+    const accessibleCredentialIds = [
+      ...userCredentialIds,
+      ...groupCredentialIds
+    ];
+
     let whereClause = {
-      isActive: true,
+      is_active: true,
       [Op.or]: [
-        { accessType: 'all' },
-        { createdById: userId }
+        { created_by_id: userId },
+        { id: { [Op.in]: accessibleCredentialIds } }
       ]
     };
-
-    // Add individual user access
-    if (groupIds.length > 0) {
-      whereClause[Op.or].push({
-        [Op.and]: [
-          { accessType: 'individual' },
-          {
-            id: {
-              [Op.in]: await CredentialUser.findAll({
-                where: { userId },
-                attributes: ['credentialId']
-              }).then(rows => rows.map(row => row.credentialId))
-            }
-          }
-        ]
-      });
-    }
-
-    // Add group access
-    if (groupIds.length > 0) {
-      whereClause[Op.or].push({
-        [Op.and]: [
-          { accessType: 'group' },
-          {
-            id: {
-              [Op.in]: await CredentialGroup.findAll({
-                where: { groupId: { [Op.in]: groupIds } },
-                attributes: ['credentialId']
-              }).then(rows => rows.map(row => row.credentialId))
-            }
-          }
-        ]
-      });
-    }
 
     if (project) {
       whereClause.project = project;
@@ -93,7 +80,7 @@ router.get('/', auth, async (req, res) => {
     const credentials = await Credential.findAll({
       where: whereClause,
       include: [
-        { model: User, as: 'createdBy', attributes: ['firstName', 'lastName', 'email'] }
+        { model: User, as: 'createdBy', attributes: ['first_name', 'last_name', 'email'] }
       ],
       order: [['created_at', 'DESC']]
     });
@@ -121,58 +108,47 @@ router.get('/for-url', auth, async (req, res) => {
     });
     const groupIds = userGroups.map(ug => ug.groupId);
 
-    let whereClause = {
-      isActive: true,
-      [Op.or]: [
-        { accessType: 'all' },
-        { createdById: userId }
-      ]
-    };
-
-    // Add individual user access
+    // Get individual user access
     const userCredentialIds = await CredentialUser.findAll({
       where: { userId },
       attributes: ['credentialId']
     }).then(rows => rows.map(row => row.credentialId));
 
-    if (userCredentialIds.length > 0) {
-      whereClause[Op.or].push({
-        [Op.and]: [
-          { accessType: 'individual' },
-          { id: { [Op.in]: userCredentialIds } }
-        ]
-      });
-    }
-
-    // Add group access
+    // Get group access
+    let groupCredentialIds = [];
     if (groupIds.length > 0) {
-      const groupCredentialIds = await CredentialGroup.findAll({
+      groupCredentialIds = await CredentialGroup.findAll({
         where: { groupId: { [Op.in]: groupIds } },
         attributes: ['credentialId']
       }).then(rows => rows.map(row => row.credentialId));
-
-      if (groupCredentialIds.length > 0) {
-        whereClause[Op.or].push({
-          [Op.and]: [
-            { accessType: 'group' },
-            { id: { [Op.in]: groupCredentialIds } }
-          ]
-        });
-      }
     }
+
+    // Combine all accessible credential IDs
+    const accessibleCredentialIds = [
+      ...userCredentialIds,
+      ...groupCredentialIds
+    ];
+
+    let whereClause = {
+      is_active: true,
+      [Op.or]: [
+        { created_by_id: userId },
+        { id: { [Op.in]: accessibleCredentialIds } }
+      ]
+    };
 
     const credentials = await Credential.findAll({
       where: whereClause,
       include: [
-        { model: User, as: 'createdBy', attributes: ['firstName', 'lastName'] }
+        { model: User, as: 'createdBy', attributes: ['first_name', 'last_name'] }
       ]
     });
 
     // Filter credentials that match the URL
     const matchingCredentials = credentials.filter(cred => {
       if (cred.url === url) return true;
-      if (cred.urlPattern) {
-        const pattern = cred.urlPattern.replace(/\*/g, '.*');
+      if (cred.url_pattern) {
+        const pattern = cred.url_pattern.replace(/\*/g, '.*');
         const regex = new RegExp(`^${pattern}$`);
         return regex.test(url);
       }
@@ -198,7 +174,7 @@ router.post('/', auth, async (req, res) => {
 
     const credential = await Credential.create({
       ...credentialData,
-      createdById: req.user.id
+      created_by_id: req.user.id
     });
 
     // Add individual user access
@@ -223,7 +199,7 @@ router.post('/', auth, async (req, res) => {
 
     const credentialWithAssociations = await Credential.findByPk(credential.id, {
       include: [
-        { model: User, as: 'createdBy', attributes: ['firstName', 'lastName', 'email'] }
+        { model: User, as: 'createdBy', attributes: ['first_name', 'last_name', 'email'] }
       ]
     });
 
@@ -252,7 +228,7 @@ router.put('/:id', auth, async (req, res) => {
     }
 
     // Check if user can update this credential
-    if (credential.createdById !== req.user.id && req.user.role !== 'admin') {
+    if (credential.created_by_id !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Not authorized to update this credential' });
     }
 
@@ -286,7 +262,7 @@ router.put('/:id', auth, async (req, res) => {
 
     const updatedCredential = await Credential.findByPk(id, {
       include: [
-        { model: User, as: 'createdBy', attributes: ['firstName', 'lastName', 'email'] }
+        { model: User, as: 'createdBy', attributes: ['first_name', 'last_name', 'email'] }
       ]
     });
 
@@ -308,11 +284,11 @@ router.delete('/:id', auth, async (req, res) => {
     }
 
     // Check if user can delete this credential
-    if (credential.createdById !== req.user.id && req.user.role !== 'admin') {
+    if (credential.created_by_id !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Not authorized to delete this credential' });
     }
 
-    await credential.update({ isActive: false });
+    await credential.update({ is_active: false });
 
     res.json({ message: 'Credential deleted successfully' });
   } catch (error) {
@@ -333,9 +309,9 @@ router.post('/:id/use', auth, async (req, res) => {
 
     // Check if user has access to this credential
     const userId = req.user.id;
-    const hasAccess = credential.accessType === 'all' || credential.createdById === userId;
+    const isCreator = credential.created_by_id === userId;
 
-    if (!hasAccess) {
+    if (!isCreator) {
       // Check individual access
       const userAccess = await CredentialUser.findOne({
         where: { credentialId: id, userId }
@@ -366,8 +342,8 @@ router.post('/:id/use', auth, async (req, res) => {
     }
 
     await credential.update({
-      lastUsed: new Date(),
-      useCount: credential.useCount + 1
+      last_used: new Date(),
+      use_count: credential.use_count + 1
     });
 
     res.json({ message: 'Usage recorded' });
@@ -381,7 +357,7 @@ router.post('/:id/use', auth, async (req, res) => {
 router.get('/projects/list', auth, async (req, res) => {
   try {
     const projects = await Credential.findAll({
-      where: { isActive: true },
+      where: { is_active: true },
       attributes: ['project'],
       group: ['project']
     });
@@ -390,6 +366,291 @@ router.get('/projects/list', auth, async (req, res) => {
     res.json({ projects: projectList });
   } catch (error) {
     console.error('Get projects error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get projects with credentials count
+router.get('/projects', auth, async (req, res) => {
+  try {
+    const projects = await Credential.findAll({
+      where: { is_active: true },
+      attributes: [
+        'project',
+        [sequelize.fn('COUNT', sequelize.col('id')), 'credentialsCount']
+      ],
+      group: ['project'],
+      order: [['project', 'ASC']]
+    });
+    
+    const projectList = projects.map(p => ({
+      name: p.project,
+      credentialsCount: parseInt(p.dataValues.credentialsCount)
+    }));
+    
+    res.json({ projects: projectList });
+  } catch (error) {
+    console.error('Get projects with count error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get users assigned to a credential (direct + via teams)
+router.get('/:id/users', auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const credential = await Credential.findByPk(id);
+    if (!credential) {
+      return res.status(404).json({ message: 'Credential not found' });
+    }
+
+    // Check if user can view this credential
+    if (credential.created_by_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Not authorized to view this credential' });
+    }
+
+    // Get directly assigned users
+    const credentialUsers = await CredentialUser.findAll({
+      where: { credentialId: id },
+      include: [
+        { model: User, attributes: ['id', 'first_name', 'last_name', 'email'] }
+      ]
+    });
+
+    // Get teams assigned to this credential
+    const credentialGroups = await CredentialGroup.findAll({
+      where: { credentialId: id },
+      include: [
+        { 
+          model: Group, 
+          include: [
+            { 
+              model: User, 
+              through: { attributes: [] },
+              attributes: ['id', 'first_name', 'last_name', 'email']
+            }
+          ]
+        }
+      ]
+    });
+
+    // Combine direct users and team members
+    const directUsers = credentialUsers.map(cu => ({
+      ...cu.User.dataValues,
+      assignmentType: 'direct'
+    }));
+
+    const teamMembers = [];
+    credentialGroups.forEach(cg => {
+      cg.Group.Users.forEach(user => {
+        teamMembers.push({
+          ...user.dataValues,
+          assignmentType: 'team',
+          teamName: cg.Group.name
+        });
+      });
+    });
+
+    // Remove duplicates (users who are both directly assigned and team members)
+    const allUsers = [...directUsers];
+    const directUserIds = new Set(directUsers.map(u => u.id));
+    
+    teamMembers.forEach(user => {
+      if (!directUserIds.has(user.id)) {
+        allUsers.push(user);
+      }
+    });
+
+    res.json({ users: allUsers });
+  } catch (error) {
+    console.error('Get credential users error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get teams assigned to a credential
+router.get('/:id/teams', auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const credential = await Credential.findByPk(id);
+    if (!credential) {
+      return res.status(404).json({ message: 'Credential not found' });
+    }
+
+    // Check if user can view this credential
+    if (credential.created_by_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Not authorized to view this credential' });
+    }
+
+    const credentialGroups = await CredentialGroup.findAll({
+      where: { credentialId: id },
+      include: [
+        { model: Group, attributes: ['id', 'name', 'description'] }
+      ]
+    });
+
+    const teams = credentialGroups.map(cg => cg.Group);
+    res.json({ teams });
+  } catch (error) {
+    console.error('Get credential teams error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Assign user to credential
+router.post('/:id/users', auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ message: 'User ID is required' });
+    }
+
+    const credential = await Credential.findByPk(id);
+    if (!credential) {
+      return res.status(404).json({ message: 'Credential not found' });
+    }
+
+    // Check if user can modify this credential
+    if (credential.created_by_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Not authorized to modify this credential' });
+    }
+
+    // Check if user exists
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check if assignment already exists
+    const existingAssignment = await CredentialUser.findOne({
+      where: { credentialId: id, userId }
+    });
+
+    if (existingAssignment) {
+      return res.status(400).json({ message: 'User is already assigned to this credential' });
+    }
+
+    await CredentialUser.create({
+      credentialId: id,
+      userId
+    });
+
+    res.json({ message: 'User assigned successfully' });
+  } catch (error) {
+    console.error('Assign user error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Assign team to credential
+router.post('/:id/teams', auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { teamId } = req.body;
+
+    if (!teamId) {
+      return res.status(400).json({ message: 'Team ID is required' });
+    }
+
+    const credential = await Credential.findByPk(id);
+    if (!credential) {
+      return res.status(404).json({ message: 'Credential not found' });
+    }
+
+    // Check if user can modify this credential
+    if (credential.created_by_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Not authorized to modify this credential' });
+    }
+
+    // Check if team exists
+    const team = await Group.findByPk(teamId);
+    if (!team) {
+      return res.status(404).json({ message: 'Team not found' });
+    }
+
+    // Check if assignment already exists
+    const existingAssignment = await CredentialGroup.findOne({
+      where: { credentialId: id, groupId: teamId }
+    });
+
+    if (existingAssignment) {
+      return res.status(400).json({ message: 'Team is already assigned to this credential' });
+    }
+
+    await CredentialGroup.create({
+      credentialId: id,
+      groupId: teamId
+    });
+
+    res.json({ message: 'Team assigned successfully' });
+  } catch (error) {
+    console.error('Assign team error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Remove user from credential
+router.delete('/:id/users/:userId', auth, async (req, res) => {
+  try {
+    const { id, userId } = req.params;
+
+    const credential = await Credential.findByPk(id);
+    if (!credential) {
+      return res.status(404).json({ message: 'Credential not found' });
+    }
+
+    // Check if user can modify this credential
+    if (credential.created_by_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Not authorized to modify this credential' });
+    }
+
+    const assignment = await CredentialUser.findOne({
+      where: { credentialId: id, userId }
+    });
+
+    if (!assignment) {
+      return res.status(404).json({ message: 'User assignment not found' });
+    }
+
+    await assignment.destroy();
+    res.json({ message: 'User removed successfully' });
+  } catch (error) {
+    console.error('Remove user error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Remove team from credential
+router.delete('/:id/teams/:teamId', auth, async (req, res) => {
+  try {
+    const { id, teamId } = req.params;
+
+    const credential = await Credential.findByPk(id);
+    if (!credential) {
+      return res.status(404).json({ message: 'Credential not found' });
+    }
+
+    // Check if user can modify this credential
+    if (credential.created_by_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Not authorized to modify this credential' });
+    }
+
+    const assignment = await CredentialGroup.findOne({
+      where: { credentialId: id, groupId: teamId }
+    });
+
+    if (!assignment) {
+      return res.status(404).json({ message: 'Team assignment not found' });
+    }
+
+    await assignment.destroy();
+    res.json({ message: 'Team removed successfully' });
+  } catch (error) {
+    console.error('Remove team error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

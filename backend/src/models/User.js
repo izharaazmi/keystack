@@ -24,39 +24,33 @@ const User = sequelize.define('User', {
 			len: [6, 255]
 		}
 	},
-	firstName: {
+	first_name: {
 		type: DataTypes.STRING,
-		allowNull: false,
-		field: 'first_name'
+		allowNull: false
 	},
-	lastName: {
+	last_name: {
 		type: DataTypes.STRING,
-		allowNull: false,
-		field: 'last_name'
+		allowNull: false
 	},
-	isEmailVerified: {
+	is_email_verified: {
 		type: DataTypes.BOOLEAN,
-		defaultValue: false,
-		field: 'is_email_verified'
+		defaultValue: false
 	},
-	emailVerificationToken: {
+	email_verification_token: {
 		type: DataTypes.STRING,
-		allowNull: true,
-		field: 'email_verification_token'
+		allowNull: true
 	},
 	role: {
 		type: DataTypes.ENUM('admin', 'user'),
 		defaultValue: 'user'
 	},
-	isActive: {
+	is_active: {
 		type: DataTypes.BOOLEAN,
-		defaultValue: true,
-		field: 'is_active'
+		defaultValue: true
 	},
-	lastLogin: {
+	last_login: {
 		type: DataTypes.DATE,
-		allowNull: true,
-		field: 'last_login'
+		allowNull: true
 	}
 }, {
 	tableName: 'cp_users',

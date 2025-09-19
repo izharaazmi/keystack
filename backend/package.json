@@ -9,6 +9,8 @@
     "start": "node src/index.js",
     "build": "echo 'No build step required for Node.js'",
     "setup-db": "node database/setup.js",
+    "migrate": "node database/migrate.js migrate",
+    "migrate:version": "node database/migrate.js version",
     "create-admin": "node src/scripts/createAdmin.js",
     "seed-credentials": "node src/scripts/seedCredentials.js",
     "create-test-users": "node src/scripts/createTestUsers.js"

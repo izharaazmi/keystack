@@ -18,11 +18,11 @@ const auth = async (req, res, next) => {
       return res.status(401).json({ message: 'Token is not valid' });
     }
 
-    if (!user.isEmailVerified) {
+    if (!user.is_email_verified) {
       return res.status(401).json({ message: 'Email not verified' });
     }
 
-    if (!user.isActive) {
+    if (!user.is_active) {
       return res.status(401).json({ message: 'Account is deactivated' });
     }
 

@@ -1,55 +1,127 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useMemo} from 'react';
 import {useQuery, useMutation, useQueryClient} from 'react-query';
-import {Search, Shield, UserX, UserCheck, Users as UsersIcon, X, Plus} from 'lucide-react';
+import {useSearchParams} from 'react-router-dom';
+import {Search, Shield, UserX, UserCheck, Users as UsersIcon, Plus, ChevronUp, ChevronDown, X} from 'lucide-react';
 import {api} from '../utils/api';
 import toast from 'react-hot-toast';
+import Pagination from '../components/Pagination';
+import TeamAssignmentModal from '../components/TeamAssignmentModal';
+import CreateUserModal from '../components/CreateUserModal';
 
 const Users = () => {
+  const [searchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [teamFilter, setTeamFilter] = useState('');
+  const [sortField, setSortField] = useState('created_at');
+  const [sortDirection, setSortDirection] = useState('desc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [showTeamModal, setShowTeamModal] = useState(false);
-  const [selectedTeam, setSelectedTeam] = useState('');
   const [showUserModal, setShowUserModal] = useState(false);
-  const [newUser, setNewUser] = useState({
-    email: '',
-    password: '',
-    firstName: '',
-    lastName: '',
-    role: 'user'
-  });
   const queryClient = useQueryClient();
 
-  const { data: users, isLoading } = useQuery(
-    ['users', searchTerm, roleFilter, statusFilter],
+  // Initialize team filter from URL parameters
+  useEffect(() => {
+    const teamParam = searchParams.get('team');
+    if (teamParam) {
+      setTeamFilter(teamParam);
+    }
+  }, [searchParams]);
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+    setCurrentPage(1); // Reset to first page when sorting
+  };
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  const handlePageSizeChange = (newPageSize) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1); // Reset to first page when changing page size
+  };
+
+  const SortableHeader = ({ field, children, align = 'left' }) => {
+    const alignmentClass = align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : 'text-left';
+    return (
+      <th 
+        className={`cursor-pointer hover:bg-gray-50 select-none ${alignmentClass}`}
+        onClick={() => handleSort(field)}
+      >
+        <div className={`flex items-center space-x-1 ${align === 'center' ? 'justify-center' : align === 'right' ? 'justify-end' : 'justify-start'}`}>
+          <span>{children}</span>
+          {sortField === field && (
+            sortDirection === 'asc' ? 
+              <ChevronUp className="h-4 w-4" /> : 
+              <ChevronDown className="h-4 w-4" />
+          )}
+        </div>
+      </th>
+    );
+  };
+
+  const { data: usersData, isLoading } = useQuery(
+    ['users', searchTerm, roleFilter, statusFilter, teamFilter, sortField, sortDirection, currentPage, pageSize],
     async () => {
       const params = new URLSearchParams();
       if (searchTerm) params.append('search', searchTerm);
       if (roleFilter) params.append('role', roleFilter);
-      if (statusFilter) params.append('isActive', statusFilter);
+      if (statusFilter) params.append('is_active', statusFilter);
+      if (teamFilter) params.append('team_id', teamFilter);
+      params.append('sort_field', sortField);
+      params.append('sort_direction', sortDirection);
+      params.append('page', currentPage.toString());
+      params.append('limit', pageSize.toString());
       
       const response = await api.get(`/users?${params.toString()}`);
-      return response.data.users;
+      return response.data;
     }
   );
+
+  const users = useMemo(() => usersData?.users || [], [usersData?.users]);
+  const pagination = usersData?.pagination;
 
   const { data: teams } = useQuery('teams', async () => {
     const response = await api.get('/teams');
     return response.data.groups;
   });
 
+  // Smart optimization: if only one page, we can do client-side search for better UX
+  const [isSinglePage, setIsSinglePage] = useState(false);
+  
+  // Update single page detection when pagination data changes
+  useEffect(() => {
+    if (pagination) {
+      setIsSinglePage(pagination.totalPages <= 1);
+    }
+  }, [pagination]);
+  
+  const filteredUsers = useMemo(() => {
+    if (!users) return [];
+    
+    // If single page and no server-side search, do client-side search for instant feedback
+    if (isSinglePage && !searchTerm) {
+      return users;
+    }
+    
+    // Otherwise, use server-side filtered results
+    return users;
+  }, [users, searchTerm, isSinglePage]);
+
   const { data: pendingUsers } = useQuery('pendingUsers', async () => {
     const response = await api.get('/users/pending');
     return response.data.users;
   });
 
-  // Auto-set role to admin if it's the first user
-  useEffect(() => {
-    if (users && users.length === 0) {
-      setNewUser(prev => ({ ...prev, role: 'admin' }));
-    }
-  }, [users]);
 
   const activateMutation = useMutation(
     (id) => api.patch(`/users/${id}/activate`),
@@ -85,7 +157,6 @@ const Users = () => {
         queryClient.invalidateQueries('users');
         setSelectedUsers([]);
         setShowTeamModal(false);
-        setSelectedTeam('');
         toast.success(`Successfully added ${data.data.added} users to team${data.data.skipped > 0 ? ` (${data.data.skipped} already in team)` : ''}`);
       },
       onError: (error) => {
@@ -101,13 +172,6 @@ const Users = () => {
         toast.success('User created successfully');
         queryClient.invalidateQueries('users');
         setShowUserModal(false);
-        setNewUser({
-          email: '',
-          password: '',
-          firstName: '',
-          lastName: '',
-          role: 'user'
-        });
       },
       onError: (error) => {
         toast.error(error.response?.data?.message || 'Failed to create user');
@@ -143,7 +207,7 @@ const Users = () => {
   );
 
   const handleToggleStatus = (user) => {
-    if (user.isActive) {
+    if (user.is_active) {
       deactivateMutation.mutate(user.id);
     } else {
       activateMutation.mutate(user.id);
@@ -166,25 +230,20 @@ const Users = () => {
     }
   };
 
-  const handleBatchAssign = () => {
+  const handleBatchAssign = (teamId) => {
     if (selectedUsers.length === 0) {
       toast.error('Please select users to assign');
       return;
     }
-    if (!selectedTeam) {
-      toast.error('Please select a team');
-      return;
-    }
-    batchAssignMutation.mutate({ teamId: selectedTeam, userIds: selectedUsers });
+    batchAssignMutation.mutate({ teamId: teamId, userIds: selectedUsers });
   };
 
-  const handleCreateUser = (e) => {
-    e.preventDefault();
-    if (!newUser.email || !newUser.password || !newUser.firstName || !newUser.lastName) {
+  const handleCreateUser = (formData) => {
+    if (!formData.email || !formData.password || !formData.first_name || !formData.last_name) {
       toast.error('Please fill in all required fields');
       return;
     }
-    createUserMutation.mutate(newUser);
+    createUserMutation.mutate(formData);
   };
 
   const handleRoleChange = (userId, newRole) => {
@@ -232,7 +291,10 @@ const Users = () => {
               type="text"
               placeholder="Search users..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1); // Reset to first page when searching
+              }}
               className="input pl-10"
             />
           </div>
@@ -240,7 +302,10 @@ const Users = () => {
         <div className="sm:w-32">
           <select
             value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
+            onChange={(e) => {
+              setRoleFilter(e.target.value);
+              setCurrentPage(1);
+            }}
             className="input"
           >
             <option value="">All Roles</option>
@@ -251,12 +316,32 @@ const Users = () => {
         <div className="sm:w-32">
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setCurrentPage(1);
+            }}
             className="input"
           >
             <option value="">All Status</option>
             <option value="true">Active</option>
             <option value="false">Inactive</option>
+          </select>
+        </div>
+        <div className="sm:w-40">
+          <select
+            value={teamFilter}
+            onChange={(e) => {
+              setTeamFilter(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="input"
+          >
+            <option value="">All Teams</option>
+            {teams?.map((team) => (
+              <option key={team.id} value={team.id}>
+                {team.name}
+              </option>
+            ))}
           </select>
         </div>
       </div>
@@ -295,28 +380,29 @@ const Users = () => {
           <table className="table">
             <thead>
               <tr>
-                <th>
+                <th className="text-center">
                   <input
                     type="checkbox"
-                    checked={selectedUsers.length === users?.length && users?.length > 0}
+                    checked={selectedUsers.length === filteredUsers?.length && filteredUsers?.length > 0}
                     onChange={handleSelectAll}
                     className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                   />
                 </th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th>Email Verified</th>
-                <th>Joined</th>
-                <th>Last Login</th>
-                <th>Actions</th>
+                <SortableHeader field="first_name">Name</SortableHeader>
+                <SortableHeader field="email">Email</SortableHeader>
+                <SortableHeader field="role" align="center">Role</SortableHeader>
+                <SortableHeader field="is_active" align="center">Status</SortableHeader>
+                <SortableHeader field="team_count" align="center">Teams</SortableHeader>
+                <th className="text-center">Email Verified</th>
+                <SortableHeader field="created_at">Joined</SortableHeader>
+                <SortableHeader field="last_login">Last Login</SortableHeader>
+                <th className="text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {users?.map((user) => (
+              {filteredUsers?.map((user) => (
                 <tr key={user.id}>
-                  <td>
+                  <td className="text-center">
                     <input
                       type="checkbox"
                       checked={selectedUsers.includes(user.id)}
@@ -325,10 +411,10 @@ const Users = () => {
                     />
                   </td>
                   <td className="font-medium">
-                    {user.firstName} {user.lastName}
+                    {user.first_name} {user.last_name}
                   </td>
                   <td>{user.email}</td>
-                  <td>
+                  <td className="text-center">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                       user.role === 'admin' 
                         ? 'bg-red-100 text-red-800'
@@ -337,45 +423,54 @@ const Users = () => {
                       {user.role}
                     </span>
                   </td>
-                  <td>
+                  <td className="text-center">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      user.isActive 
+                      user.is_active 
                         ? 'bg-green-100 text-green-800'
                         : 'bg-red-100 text-red-800'
                     }`}>
-                      {user.isActive ? 'Active' : 'Inactive'}
+                      {user.is_active ? 'Active' : 'Inactive'}
                     </span>
                   </td>
-                  <td>
+                  <td className="text-center">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      user.isEmailVerified 
+                      user.team_count > 0 
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      {user.team_count > 0 ? `${user.team_count} team${user.team_count !== 1 ? 's' : ''}` : 'No teams'}
+                    </span>
+                  </td>
+                  <td className="text-center">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      user.is_email_verified 
                         ? 'bg-green-100 text-green-800'
                         : 'bg-yellow-100 text-yellow-800'
                     }`}>
-                      {user.isEmailVerified ? 'Verified' : 'Pending'}
+                      {user.is_email_verified ? 'Verified' : 'Pending'}
                     </span>
                   </td>
                   <td>
-                    {new Date(user.createdAt).toLocaleDateString()}
+                    {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
                   </td>
                   <td>
-                    {user.lastLogin 
-                      ? new Date(user.lastLogin).toLocaleDateString()
+                    {user.last_login 
+                      ? new Date(user.last_login).toLocaleDateString()
                       : 'Never'
                     }
                   </td>
-                  <td>
-                    <div className="flex space-x-2">
+                  <td className="text-center">
+                    <div className="flex space-x-2 justify-center">
                       <button
                         onClick={() => handleToggleStatus(user)}
                         className={`${
-                          user.isActive 
+                          user.is_active 
                             ? 'text-red-600 hover:text-red-800'
                             : 'text-green-600 hover:text-green-800'
                         }`}
-                        title={user.isActive ? 'Deactivate user' : 'Activate user'}
+                        title={user.is_active ? 'Deactivate user' : 'Activate user'}
                       >
-                        {user.isActive ? (
+                        {user.is_active ? (
                           <UserX className="h-4 w-4" />
                         ) : (
                           <UserCheck className="h-4 w-4" />
@@ -414,6 +509,14 @@ const Users = () => {
             </tbody>
           </table>
         </div>
+        
+        <Pagination
+          pagination={pagination}
+          currentPage={currentPage}
+          pageSize={pageSize}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
+        />
       </div>
 
       {users?.length === 0 && (
@@ -453,7 +556,7 @@ const Users = () => {
                   {pendingUsers.map((user) => (
                     <tr key={user.id}>
                       <td className="font-medium">
-                        {user.firstName} {user.lastName}
+                        {user.first_name} {user.last_name}
                       </td>
                       <td>{user.email}</td>
                       <td>
@@ -467,27 +570,27 @@ const Users = () => {
                       </td>
                       <td>
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          user.isEmailVerified 
+                          user.is_email_verified 
                             ? 'bg-green-100 text-green-800'
                             : 'bg-yellow-100 text-yellow-800'
                         }`}>
-                          {user.isEmailVerified ? 'Verified' : 'Pending'}
+                          {user.is_email_verified ? 'Verified' : 'Pending'}
                         </span>
                       </td>
                       <td>
-                        {new Date(user.createdAt).toLocaleDateString()}
+                        {new Date(user.created_at).toLocaleDateString()}
                       </td>
                       <td>
                         <div className="flex space-x-2">
                           <button
                             onClick={() => approveUserMutation.mutate(user.id)}
-                            disabled={!user.isEmailVerified || approveUserMutation.isLoading}
+                            disabled={!user.is_email_verified || approveUserMutation.isLoading}
                             className={`px-3 py-1 text-sm rounded ${
-                              !user.isEmailVerified
+                              !user.is_email_verified
                                 ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                                 : 'bg-green-100 text-green-700 hover:bg-green-200'
                             }`}
-                            title={!user.isEmailVerified ? 'User must verify email first' : 'Approve user'}
+                            title={!user.is_email_verified ? 'User must verify email first' : 'Approve user'}
                           >
                             {approveUserMutation.isLoading ? 'Approving...' : 'Approve'}
                           </button>
@@ -502,184 +605,22 @@ const Users = () => {
         </div>
       )}
 
-      {/* Team Selection Modal */}
-      {showTeamModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div className="mt-3">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                Assign {selectedUsers.length} user{selectedUsers.length !== 1 ? 's' : ''} to Team
-              </h3>
-              
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Select Team
-                </label>
-                <select
-                  value={selectedTeam}
-                  onChange={(e) => setSelectedTeam(e.target.value)}
-                  className="input w-full"
-                >
-                  <option value="">Choose a team...</option>
-                  {teams?.map((team) => (
-                    <option key={team.id} value={team.id}>
-                      {team.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+      <TeamAssignmentModal
+        isOpen={showTeamModal}
+        onClose={() => setShowTeamModal(false)}
+        selectedUsers={selectedUsers}
+        teams={teams}
+        onAssign={handleBatchAssign}
+        isLoading={batchAssignMutation.isLoading}
+      />
 
-              <div className="flex justify-end space-x-3">
-                <button
-                  onClick={() => {
-                    setShowTeamModal(false);
-                    setSelectedTeam('');
-                  }}
-                  className="btn btn-secondary"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleBatchAssign}
-                  disabled={!selectedTeam || batchAssignMutation.isLoading}
-                  className="btn btn-primary"
-                >
-                  {batchAssignMutation.isLoading ? 'Assigning...' : 'Assign to Team'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Create User Modal */}
-      {showUserModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900">Create New User</h3>
-              <button
-                onClick={() => setShowUserModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-            
-            <form onSubmit={handleCreateUser} className="space-y-4" autoComplete="off">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    First Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={newUser.firstName}
-                    onChange={(e) => setNewUser({...newUser, firstName: e.target.value})}
-                    className="input w-full"
-                    autoComplete="off"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Last Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={newUser.lastName}
-                    onChange={(e) => setNewUser({...newUser, lastName: e.target.value})}
-                    className="input w-full"
-                    autoComplete="off"
-                    required
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email *
-                </label>
-                <input
-                  type="email"
-                  value={newUser.email}
-                  onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-                  className="input w-full"
-                  autoComplete="off"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Password *
-                </label>
-                <input
-                  type="password"
-                  value={newUser.password}
-                  onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-                  className="input w-full"
-                  autoComplete="new-password"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Role
-                </label>
-                <div className="flex items-center space-x-4">
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="role"
-                      value="user"
-                      checked={newUser.role === 'user'}
-                      onChange={(e) => setNewUser({...newUser, role: e.target.value})}
-                      className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">User</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="role"
-                      value="admin"
-                      checked={newUser.role === 'admin'}
-                      onChange={(e) => setNewUser({...newUser, role: e.target.value})}
-                      className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">Admin</span>
-                  </label>
-                </div>
-                {users && users.length === 0 && (
-                  <p className="text-xs text-gray-500 mt-2">
-                    The first user will automatically be assigned admin privileges.
-                  </p>
-                )}
-              </div>
-
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowUserModal(false)}
-                  className="btn btn-secondary"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={createUserMutation.isLoading}
-                  className="btn btn-primary"
-                >
-                  {createUserMutation.isLoading ? 'Creating...' : 'Create User'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <CreateUserModal
+        isOpen={showUserModal}
+        onClose={() => setShowUserModal(false)}
+        onCreate={handleCreateUser}
+        isLoading={createUserMutation.isLoading}
+        isFirstUser={users && users.length === 0}
+      />
     </div>
   );
 };

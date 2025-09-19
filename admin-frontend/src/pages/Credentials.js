@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useMemo} from 'react';
 import {useQuery, useMutation, useQueryClient} from 'react-query';
 import {useForm} from 'react-hook-form';
 import {
@@ -8,7 +8,9 @@ import {
 	Trash2,
 	Eye,
 	EyeOff,
-	ExternalLink
+	ExternalLink,
+	Users,
+	X,
 } from 'lucide-react';
 import {api} from '../utils/api';
 import toast from 'react-hot-toast';
@@ -19,15 +21,17 @@ const Credentials = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingCredential, setEditingCredential] = useState(null);
   const [showPasswords, setShowPasswords] = useState({});
+  const [showAssignmentModal, setShowAssignmentModal] = useState(false);
+  const [selectedCredential, setSelectedCredential] = useState(null);
+  const [projectInputMode, setProjectInputMode] = useState('select'); // 'select' or 'input'
   const queryClient = useQueryClient();
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm();
 
   const { data: credentials, isLoading } = useQuery(
-    ['credentials', searchTerm, selectedProject],
+    ['credentials', selectedProject],
     async () => {
       const params = new URLSearchParams();
-      if (searchTerm) params.append('search', searchTerm);
       if (selectedProject) params.append('project', selectedProject);
       
       const response = await api.get(`/credentials?${params.toString()}`);
@@ -39,6 +43,37 @@ const Credentials = () => {
     const response = await api.get('/credentials/projects/list');
     return response.data.projects;
   });
+
+  const filteredCredentials = useMemo(() => {
+    if (!credentials) return [];
+    
+    let filtered = credentials;
+    
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(credential =>
+        credential.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        credential.url.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        credential.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (credential.project && credential.project.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    }
+    
+    return filtered;
+  }, [credentials, searchTerm]);
+
+  const { data: assignedUsers, isLoading: assignedUsersLoading } = useQuery(
+    ['assignedUsers', selectedCredential?.id],
+    async () => {
+      if (!selectedCredential?.id) return [];
+      const response = await api.get(`/credentials/${selectedCredential.id}/users`);
+      return response.data.users;
+    },
+    {
+      enabled: !!selectedCredential?.id
+    }
+  );
+
 
 
   const createMutation = useMutation(
@@ -98,13 +133,15 @@ const Credentials = () => {
     reset({
       label: credential.label,
       url: credential.url,
-      urlPattern: credential.urlPattern || '',
+      url_pattern: credential.url_pattern || '',
       username: credential.username,
       password: credential.password,
       description: credential.description || '',
       project: credential.project || '',
-      accessType: credential.accessType,
     });
+    // Set project input mode based on whether the project exists in the list
+    const projectExists = projects?.includes(credential.project || 'default');
+    setProjectInputMode(projectExists ? 'select' : 'input');
     setShowModal(true);
   };
 
@@ -123,6 +160,15 @@ const Credentials = () => {
 
   const openUrl = (url) => {
     window.open(url, '_blank');
+  };
+
+  const handleViewAssignments = (credential) => {
+    setSelectedCredential(credential);
+    setShowAssignmentModal(true);
+  };
+
+  const handleProjectModeToggle = () => {
+    setProjectInputMode(prev => prev === 'select' ? 'input' : 'select');
   };
 
   if (isLoading) {
@@ -146,6 +192,7 @@ const Credentials = () => {
           onClick={() => {
             setEditingCredential(null);
             reset();
+            setProjectInputMode('select');
             setShowModal(true);
           }}
           className="btn btn-primary flex items-center"
@@ -196,12 +243,11 @@ const Credentials = () => {
                 <th>Username</th>
                 <th>Password</th>
                 <th>Project</th>
-                <th>Access Type</th>
-                <th>Actions</th>
+                <th className="text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {credentials?.map((credential) => (
+              {filteredCredentials?.map((credential) => (
                 <tr key={credential.id}>
                   <td className="font-medium">{credential.label}</td>
                   <td>
@@ -241,19 +287,15 @@ const Credentials = () => {
                       {credential.project}
                     </span>
                   </td>
-                  <td>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      credential.accessType === 'all' 
-                        ? 'bg-green-100 text-green-800'
-                        : credential.accessType === 'group'
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {credential.accessType}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="flex space-x-2">
+                  <td className="text-center">
+                    <div className="flex space-x-2 justify-center">
+                      <button
+                        onClick={() => handleViewAssignments(credential)}
+                        className="text-blue-600 hover:text-blue-800"
+                        title="View assigned users"
+                      >
+                        <Users className="h-4 w-4" />
+                      </button>
                       <button
                         onClick={() => handleEdit(credential)}
                         className="text-primary-600 hover:text-primary-800"
@@ -312,7 +354,7 @@ const Credentials = () => {
                     <div>
                       <label className="block text-sm font-medium text-gray-700">URL Pattern (optional)</label>
                       <input
-                        {...register('urlPattern')}
+                        {...register('url_pattern')}
                         className="input mt-1"
                         placeholder="*.example.com"
                       />
@@ -351,24 +393,52 @@ const Credentials = () => {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Project</label>
-                      <input
-                        {...register('project')}
-                        className="input mt-1"
-                        placeholder="default"
-                      />
+                      <div className="mt-1 flex rounded-md shadow-sm">
+                        {projectInputMode === 'select' ? (
+                          <select
+                            {...register('project')}
+                            className="input rounded-r-none"
+                            defaultValue="default"
+                          >
+                            <option value="default">default</option>
+                            {projects?.map((project) => (
+                              <option key={project} value={project}>
+                                {project}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            {...register('project')}
+                            className="input rounded-r-none"
+                            placeholder="Enter new project name"
+                          />
+                        )}
+                        <button
+                          type="button"
+                          onClick={handleProjectModeToggle}
+                          className="relative -ml-px inline-flex items-center px-3 py-2 border border-gray-300 bg-gray-50 text-gray-500 text-sm hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 rounded-r-md"
+                          title={projectInputMode === 'select' ? 'Enter new project' : 'Select existing project'}
+                        >
+                          {projectInputMode === 'select' ? (
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                            </svg>
+                          ) : (
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
+                      <p className="mt-1 text-xs text-gray-500">
+                        {projectInputMode === 'select' 
+                          ? 'Select an existing project or click + to create a new one'
+                          : 'Enter a new project name or click ▼ to select existing'
+                        }
+                      </p>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Access Type</label>
-                      <select
-                        {...register('accessType')}
-                        className="input mt-1"
-                      >
-                        <option value="individual">Individual</option>
-                        <option value="group">Group</option>
-                        <option value="all">All Users</option>
-                      </select>
-                    </div>
                   </div>
                 </div>
 
@@ -393,6 +463,96 @@ const Credentials = () => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Assignment Modal */}
+      {showAssignmentModal && selectedCredential && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setShowAssignmentModal(false)} />
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium text-gray-900">
+                    Assigned Users - {selectedCredential.label}
+                  </h3>
+                  <button
+                    onClick={() => setShowAssignmentModal(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
+                
+                <div className="mb-4">
+                  <p className="text-sm text-gray-500">
+                    Users who have access to this credential (directly assigned or via team membership)
+                  </p>
+                </div>
+
+                {assignedUsersLoading ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                  </div>
+                ) : assignedUsers?.length > 0 ? (
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {assignedUsers.map((user) => (
+                      <div key={user.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <div className="flex-shrink-0">
+                            <div className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center">
+                              <span className="text-sm font-medium text-primary-600">
+                                {user.first_name.charAt(0)}{user.last_name.charAt(0)}
+                              </span>
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">
+                              {user.first_name} {user.last_name}
+                            </p>
+                            <p className="text-sm text-gray-500">{user.email}</p>
+                            {user.assignmentType === 'team' && (
+                              <p className="text-xs text-blue-600">
+                                Via team: {user.teamName}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex-shrink-0">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            user.assignmentType === 'direct' 
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {user.assignmentType === 'direct' ? 'Direct' : 'Team'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Users className="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">No users assigned</h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      This credential has no users assigned directly or via teams.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  onClick={() => setShowAssignmentModal(false)}
+                  className="btn btn-secondary sm:w-auto"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
