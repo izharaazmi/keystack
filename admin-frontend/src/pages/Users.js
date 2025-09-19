@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useMemo} from 'react';
+import React, {useState, useEffect, useMemo, useCallback} from 'react';
 import {useQuery, useMutation, useQueryClient} from 'react-query';
 import {useSearchParams} from 'react-router-dom';
 import {Search, Shield, UserX, UserCheck, Users as UsersIcon, Plus, ChevronUp, ChevronDown, X} from 'lucide-react';
@@ -11,6 +11,7 @@ import CreateUserModal from '../components/CreateUserModal';
 const Users = () => {
   const [searchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [teamFilter, setTeamFilter] = useState('');
@@ -31,7 +32,16 @@ const Users = () => {
     }
   }, [searchParams]);
 
-  const handleSort = (field) => {
+  // Debounce search term to prevent excessive API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 150);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const handleSort = useCallback((field) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
@@ -39,18 +49,18 @@ const Users = () => {
       setSortDirection('asc');
     }
     setCurrentPage(1); // Reset to first page when sorting
-  };
+  }, [sortField, sortDirection]);
 
-  const handlePageChange = (page) => {
+  const handlePageChange = useCallback((page) => {
     setCurrentPage(page);
-  };
+  }, []);
 
-  const handlePageSizeChange = (newPageSize) => {
+  const handlePageSizeChange = useCallback((newPageSize) => {
     setPageSize(newPageSize);
     setCurrentPage(1); // Reset to first page when changing page size
-  };
+  }, []);
 
-  const SortableHeader = ({ field, children, align = 'left' }) => {
+  const SortableHeader = useCallback(({ field, children, align = 'left' }) => {
     const alignmentClass = align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : 'text-left';
     return (
       <th 
@@ -67,13 +77,13 @@ const Users = () => {
         </div>
       </th>
     );
-  };
+  }, [handleSort, sortField, sortDirection]);
 
   const { data: usersData, isLoading } = useQuery(
-    ['users', searchTerm, roleFilter, statusFilter, teamFilter, sortField, sortDirection, currentPage, pageSize],
+    ['users', debouncedSearchTerm, roleFilter, statusFilter, teamFilter, sortField, sortDirection, currentPage, pageSize],
     async () => {
       const params = new URLSearchParams();
-      if (searchTerm) params.append('search', searchTerm);
+      if (debouncedSearchTerm) params.append('search', debouncedSearchTerm);
       if (roleFilter) params.append('role', roleFilter);
       if (statusFilter) params.append('is_active', statusFilter);
       if (teamFilter) params.append('team_id', teamFilter);
@@ -84,6 +94,11 @@ const Users = () => {
       
       const response = await api.get(`/users?${params.toString()}`);
       return response.data;
+    },
+    {
+      staleTime: 0,
+      cacheTime: 0,
+      refetchOnWindowFocus: false,
     }
   );
 
@@ -95,27 +110,183 @@ const Users = () => {
     return response.data.groups;
   });
 
-  // Smart optimization: if only one page, we can do client-side search for better UX
-  const [isSinglePage, setIsSinglePage] = useState(false);
-  
-  // Update single page detection when pagination data changes
-  useEffect(() => {
-    if (pagination) {
-      setIsSinglePage(pagination.totalPages <= 1);
-    }
-  }, [pagination]);
-  
   const filteredUsers = useMemo(() => {
     if (!users) return [];
-    
-    // If single page and no server-side search, do client-side search for instant feedback
-    if (isSinglePage && !searchTerm) {
-      return users;
-    }
-    
-    // Otherwise, use server-side filtered results
     return users;
-  }, [users, searchTerm, isSinglePage]);
+  }, [users]);
+
+  // Separate memoized table component that only re-renders when data changes
+  const UsersTable = React.memo(({ 
+    users, 
+    isLoading, 
+    selectedUsers, 
+    onSelectAll, 
+    onSelectUser, 
+    onToggleStatus, 
+    onRoleChangeToUser, 
+    onRoleChangeToAdmin, 
+    updateUserRoleLoading,
+    pagination,
+    currentPage,
+    pageSize,
+    onPageChange,
+    onPageSizeChange,
+    SortableHeader
+  }) => {
+    if (isLoading) {
+      return (
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="table">
+            <thead>
+              <tr>
+                <th className="text-center">
+                  <input
+                    type="checkbox"
+                    checked={selectedUsers.length === users?.length && users?.length > 0}
+                    onChange={onSelectAll}
+                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                </th>
+                <SortableHeader field="first_name">Name</SortableHeader>
+                <SortableHeader field="email">Email</SortableHeader>
+                <SortableHeader field="role" align="center">Role</SortableHeader>
+                <SortableHeader field="is_active" align="center">Status</SortableHeader>
+                <SortableHeader field="team_count" align="center">Teams</SortableHeader>
+                <th className="text-center">Email Verified</th>
+                <SortableHeader field="created_at">Joined</SortableHeader>
+                <SortableHeader field="last_login">Last Login</SortableHeader>
+                <th className="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users?.map((user) => (
+                <tr key={user.id}>
+                  <td className="text-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedUsers.includes(user.id)}
+                      onChange={onSelectUser(user.id)}
+                      className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    />
+                  </td>
+                  <td className="font-medium">
+                    {user.first_name} {user.last_name}
+                  </td>
+                  <td>{user.email}</td>
+                  <td className="text-center">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      user.role === 'admin' 
+                        ? 'bg-red-100 text-red-800'
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {user.role}
+                    </span>
+                  </td>
+                  <td className="text-center">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      user.is_active 
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {user.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td className="text-center">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      user.team_count > 0 
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      {user.team_count > 0 ? `${user.team_count} team${user.team_count !== 1 ? 's' : ''}` : 'No teams'}
+                    </span>
+                  </td>
+                  <td className="text-center">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      user.is_email_verified 
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {user.is_email_verified ? 'Verified' : 'Pending'}
+                    </span>
+                  </td>
+                  <td>
+                    {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
+                  </td>
+                  <td>
+                    {user.last_login 
+                      ? new Date(user.last_login).toLocaleDateString()
+                      : 'Never'
+                    }
+                  </td>
+                  <td className="text-center">
+                    <div className="flex space-x-2 justify-center">
+                      <button
+                        onClick={onToggleStatus(user)}
+                        className={`${
+                          user.is_active 
+                            ? 'text-red-600 hover:text-red-800'
+                            : 'text-green-600 hover:text-green-800'
+                        }`}
+                        title={user.is_active ? 'Deactivate user' : 'Activate user'}
+                      >
+                        {user.is_active ? (
+                          <UserX className="h-4 w-4" />
+                        ) : (
+                          <UserCheck className="h-4 w-4" />
+                        )}
+                      </button>
+                      <div className="flex space-x-1">
+                        <button
+                          onClick={onRoleChangeToUser(user.id)}
+                          disabled={user.role === 'user' || updateUserRoleLoading}
+                          className={`px-2 py-1 text-xs rounded ${
+                            user.role === 'user'
+                              ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                              : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                          }`}
+                          title="Change to User role"
+                        >
+                          User
+                        </button>
+                        <button
+                          onClick={onRoleChangeToAdmin(user.id)}
+                          disabled={user.role === 'admin' || updateUserRoleLoading}
+                          className={`px-2 py-1 text-xs rounded ${
+                            user.role === 'admin'
+                              ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                              : 'bg-red-100 text-red-700 hover:bg-red-200'
+                          }`}
+                          title="Change to Admin role"
+                        >
+                          Admin
+                        </button>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        
+        <Pagination
+          pagination={pagination}
+          currentPage={currentPage}
+          pageSize={pageSize}
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+        />
+      </div>
+    );
+  });
 
   const { data: pendingUsers } = useQuery('pendingUsers', async () => {
     const response = await api.get('/users/pending');
@@ -206,47 +377,47 @@ const Users = () => {
     }
   );
 
-  const handleToggleStatus = (user) => {
+  const handleToggleStatus = useCallback((user) => {
     if (user.is_active) {
       deactivateMutation.mutate(user.id);
     } else {
       activateMutation.mutate(user.id);
     }
-  };
+  }, [deactivateMutation, activateMutation]);
 
-  const handleSelectUser = (userId) => {
+  const handleSelectUser = useCallback((userId) => {
     setSelectedUsers(prev => 
       prev.includes(userId) 
         ? prev.filter(id => id !== userId)
         : [...prev, userId]
     );
-  };
+  }, []);
 
-  const handleSelectAll = () => {
+  const handleSelectAll = useCallback(() => {
     if (selectedUsers.length === users.length) {
       setSelectedUsers([]);
     } else {
       setSelectedUsers(users.map(user => user.id));
     }
-  };
+  }, [selectedUsers.length, users]);
 
-  const handleBatchAssign = (teamId) => {
+  const handleBatchAssign = useCallback((teamId) => {
     if (selectedUsers.length === 0) {
       toast.error('Please select users to assign');
       return;
     }
     batchAssignMutation.mutate({ teamId: teamId, userIds: selectedUsers });
-  };
+  }, [selectedUsers, batchAssignMutation]);
 
-  const handleCreateUser = (formData) => {
+  const handleCreateUser = useCallback((formData) => {
     if (!formData.email || !formData.password || !formData.first_name || !formData.last_name) {
       toast.error('Please fill in all required fields');
       return;
     }
     createUserMutation.mutate(formData);
-  };
+  }, [createUserMutation]);
 
-  const handleRoleChange = (userId, newRole) => {
+  const handleRoleChange = useCallback((userId, newRole) => {
     // Check if this would leave no admins
     const currentAdmins = users.filter(user => user.role === 'admin' && user.id !== userId);
     if (newRole === 'user' && currentAdmins.length === 0) {
@@ -254,15 +425,44 @@ const Users = () => {
       return;
     }
     updateUserRoleMutation.mutate({ userId, role: newRole });
-  };
+  }, [users, updateUserRoleMutation]);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-      </div>
-    );
-  }
+  const handleSearchChange = useCallback((e) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1); // Reset to first page when searching
+  }, []);
+
+  const handleRoleFilterChange = useCallback((e) => {
+    setRoleFilter(e.target.value);
+    setCurrentPage(1);
+  }, []);
+
+  const handleStatusFilterChange = useCallback((e) => {
+    setStatusFilter(e.target.value);
+    setCurrentPage(1);
+  }, []);
+
+  const handleTeamFilterChange = useCallback((e) => {
+    setTeamFilter(e.target.value);
+    setCurrentPage(1);
+  }, []);
+
+  const handleUserToggleStatus = useCallback((user) => {
+    return () => handleToggleStatus(user);
+  }, [handleToggleStatus]);
+
+  const handleUserRoleChangeToUser = useCallback((userId) => {
+    return () => handleRoleChange(userId, 'user');
+  }, [handleRoleChange]);
+
+  const handleUserRoleChangeToAdmin = useCallback((userId) => {
+    return () => handleRoleChange(userId, 'admin');
+  }, [handleRoleChange]);
+
+  const handleUserSelect = useCallback((userId) => {
+    return () => handleSelectUser(userId);
+  }, [handleSelectUser]);
+
 
   return (
     <div>
@@ -291,10 +491,7 @@ const Users = () => {
               type="text"
               placeholder="Search users..."
               value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when searching
-              }}
+              onChange={handleSearchChange}
               className="input pl-10"
             />
           </div>
@@ -302,10 +499,7 @@ const Users = () => {
         <div className="sm:w-32">
           <select
             value={roleFilter}
-            onChange={(e) => {
-              setRoleFilter(e.target.value);
-              setCurrentPage(1);
-            }}
+            onChange={handleRoleFilterChange}
             className="input"
           >
             <option value="">All Roles</option>
@@ -316,10 +510,7 @@ const Users = () => {
         <div className="sm:w-32">
           <select
             value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setCurrentPage(1);
-            }}
+            onChange={handleStatusFilterChange}
             className="input"
           >
             <option value="">All Status</option>
@@ -330,10 +521,7 @@ const Users = () => {
         <div className="sm:w-40">
           <select
             value={teamFilter}
-            onChange={(e) => {
-              setTeamFilter(e.target.value);
-              setCurrentPage(1);
-            }}
+            onChange={handleTeamFilterChange}
             className="input"
           >
             <option value="">All Teams</option>
@@ -375,149 +563,23 @@ const Users = () => {
       )}
 
       {/* Users Table */}
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="table">
-            <thead>
-              <tr>
-                <th className="text-center">
-                  <input
-                    type="checkbox"
-                    checked={selectedUsers.length === filteredUsers?.length && filteredUsers?.length > 0}
-                    onChange={handleSelectAll}
-                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                  />
-                </th>
-                <SortableHeader field="first_name">Name</SortableHeader>
-                <SortableHeader field="email">Email</SortableHeader>
-                <SortableHeader field="role" align="center">Role</SortableHeader>
-                <SortableHeader field="is_active" align="center">Status</SortableHeader>
-                <SortableHeader field="team_count" align="center">Teams</SortableHeader>
-                <th className="text-center">Email Verified</th>
-                <SortableHeader field="created_at">Joined</SortableHeader>
-                <SortableHeader field="last_login">Last Login</SortableHeader>
-                <th className="text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUsers?.map((user) => (
-                <tr key={user.id}>
-                  <td className="text-center">
-                    <input
-                      type="checkbox"
-                      checked={selectedUsers.includes(user.id)}
-                      onChange={() => handleSelectUser(user.id)}
-                      className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                    />
-                  </td>
-                  <td className="font-medium">
-                    {user.first_name} {user.last_name}
-                  </td>
-                  <td>{user.email}</td>
-                  <td className="text-center">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      user.role === 'admin' 
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {user.role}
-                    </span>
-                  </td>
-                  <td className="text-center">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      user.is_active 
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {user.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td className="text-center">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      user.team_count > 0 
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-gray-100 text-gray-600'
-                    }`}>
-                      {user.team_count > 0 ? `${user.team_count} team${user.team_count !== 1 ? 's' : ''}` : 'No teams'}
-                    </span>
-                  </td>
-                  <td className="text-center">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      user.is_email_verified 
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {user.is_email_verified ? 'Verified' : 'Pending'}
-                    </span>
-                  </td>
-                  <td>
-                    {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
-                  </td>
-                  <td>
-                    {user.last_login 
-                      ? new Date(user.last_login).toLocaleDateString()
-                      : 'Never'
-                    }
-                  </td>
-                  <td className="text-center">
-                    <div className="flex space-x-2 justify-center">
-                      <button
-                        onClick={() => handleToggleStatus(user)}
-                        className={`${
-                          user.is_active 
-                            ? 'text-red-600 hover:text-red-800'
-                            : 'text-green-600 hover:text-green-800'
-                        }`}
-                        title={user.is_active ? 'Deactivate user' : 'Activate user'}
-                      >
-                        {user.is_active ? (
-                          <UserX className="h-4 w-4" />
-                        ) : (
-                          <UserCheck className="h-4 w-4" />
-                        )}
-                      </button>
-                      <div className="flex space-x-1">
-                        <button
-                          onClick={() => handleRoleChange(user.id, 'user')}
-                          disabled={user.role === 'user' || updateUserRoleMutation.isLoading}
-                          className={`px-2 py-1 text-xs rounded ${
-                            user.role === 'user'
-                              ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                              : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                          }`}
-                          title="Change to User role"
-                        >
-                          User
-                        </button>
-                        <button
-                          onClick={() => handleRoleChange(user.id, 'admin')}
-                          disabled={user.role === 'admin' || updateUserRoleMutation.isLoading}
-                          className={`px-2 py-1 text-xs rounded ${
-                            user.role === 'admin'
-                              ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                              : 'bg-red-100 text-red-700 hover:bg-red-200'
-                          }`}
-                          title="Change to Admin role"
-                        >
-                          Admin
-                        </button>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        
-        <Pagination
-          pagination={pagination}
-          currentPage={currentPage}
-          pageSize={pageSize}
-          onPageChange={handlePageChange}
-          onPageSizeChange={handlePageSizeChange}
-        />
-      </div>
+      <UsersTable
+        users={filteredUsers}
+        isLoading={isLoading}
+        selectedUsers={selectedUsers}
+        onSelectAll={handleSelectAll}
+        onSelectUser={handleUserSelect}
+        onToggleStatus={handleUserToggleStatus}
+        onRoleChangeToUser={handleUserRoleChangeToUser}
+        onRoleChangeToAdmin={handleUserRoleChangeToAdmin}
+        updateUserRoleLoading={updateUserRoleMutation.isLoading}
+        pagination={pagination}
+        currentPage={currentPage}
+        pageSize={pageSize}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+        SortableHeader={SortableHeader}
+      />
 
       {users?.length === 0 && (
         <div className="text-center py-12">

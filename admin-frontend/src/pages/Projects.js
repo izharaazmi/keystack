@@ -1,4 +1,4 @@
-import React, {useState, useMemo} from 'react';
+import React, {useState, useMemo, useCallback, useEffect} from 'react';
 import {useQuery} from 'react-query';
 import {
 	Search,
@@ -13,11 +13,21 @@ import {api} from '../utils/api';
 
 const Projects = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState(() => {
     return localStorage.getItem('projects-viewMode') || 'cards';
   });
   const [sortField, setSortField] = useState('name');
   const [sortDirection, setSortDirection] = useState('asc');
+
+  // Debounce search term to prevent excessive filtering
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 150);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   const { data: projects, isLoading } = useQuery(
     ['projects'],
@@ -27,21 +37,21 @@ const Projects = () => {
     }
   );
 
-  const handleSort = (field) => {
+  const handleSort = useCallback((field) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
       setSortField(field);
       setSortDirection('asc');
     }
-  };
+  }, [sortField, sortDirection]);
 
   const handleViewModeChange = (mode) => {
     setViewMode(mode);
     localStorage.setItem('projects-viewMode', mode);
   };
 
-  const SortableHeader = ({ field, children, align = 'left' }) => {
+  const SortableHeader = useCallback(({ field, children, align = 'left' }) => {
     const alignmentClass = align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : 'text-left';
     return (
       <th 
@@ -58,13 +68,13 @@ const Projects = () => {
         </div>
       </th>
     );
-  };
+  }, [handleSort, sortField, sortDirection]);
 
   const filteredProjects = useMemo(() => {
     if (!projects) return [];
     
     let filtered = projects.filter(project =>
-      project.name.toLowerCase().includes(searchTerm.toLowerCase())
+      project.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
     );
 
     // Sort the filtered results
@@ -87,7 +97,7 @@ const Projects = () => {
     });
 
     return filtered;
-  }, [projects, searchTerm, sortField, sortDirection]);
+  }, [projects, debouncedSearchTerm, sortField, sortDirection]);
 
   if (isLoading) {
     return (

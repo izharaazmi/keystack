@@ -1,4 +1,4 @@
-import React, {useState, useMemo} from 'react';
+import React, {useState, useMemo, useEffect} from 'react';
 import {useQuery, useMutation, useQueryClient} from 'react-query';
 import {useForm} from 'react-hook-form';
 import {
@@ -17,6 +17,7 @@ import toast from 'react-hot-toast';
 
 const Credentials = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [selectedProject, setSelectedProject] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingCredential, setEditingCredential] = useState(null);
@@ -27,6 +28,15 @@ const Credentials = () => {
   const queryClient = useQueryClient();
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm();
+
+  // Debounce search term to prevent excessive filtering
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 150);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   const { data: credentials, isLoading } = useQuery(
     ['credentials', selectedProject],
@@ -50,17 +60,17 @@ const Credentials = () => {
     let filtered = credentials;
     
     // Apply search filter
-    if (searchTerm) {
+    if (debouncedSearchTerm) {
       filtered = filtered.filter(credential =>
-        credential.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        credential.url.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        credential.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (credential.project && credential.project.toLowerCase().includes(searchTerm.toLowerCase()))
+        credential.label.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        credential.url.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        credential.username.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        (credential.project && credential.project.toLowerCase().includes(debouncedSearchTerm.toLowerCase()))
       );
     }
     
     return filtered;
-  }, [credentials, searchTerm]);
+  }, [credentials, debouncedSearchTerm]);
 
   const { data: assignedUsers, isLoading: assignedUsersLoading } = useQuery(
     ['assignedUsers', selectedCredential?.id],

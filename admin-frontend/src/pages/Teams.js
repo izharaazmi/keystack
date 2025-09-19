@@ -1,4 +1,4 @@
-import React, {useState, useMemo} from 'react';
+import React, {useState, useMemo, useCallback, useEffect} from 'react';
 import {useQuery, useMutation, useQueryClient} from 'react-query';
 import {useForm} from 'react-hook-form';
 import {useNavigate} from 'react-router-dom';
@@ -19,6 +19,7 @@ import toast from 'react-hot-toast';
 const Teams = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState(() => {
     return localStorage.getItem('teams-viewMode') || 'cards';
   });
@@ -30,6 +31,15 @@ const Teams = () => {
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm();
 
+  // Debounce search term to prevent excessive filtering
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 150);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   const handleTeamClick = (teamId) => {
     navigate(`/users?team=${teamId}`);
   };
@@ -39,16 +49,16 @@ const Teams = () => {
     localStorage.setItem('teams-viewMode', mode);
   };
 
-  const handleSort = (field) => {
+  const handleSort = useCallback((field) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
       setSortField(field);
       setSortDirection('asc');
     }
-  };
+  }, [sortField, sortDirection]);
 
-  const SortableHeader = ({ field, children, align = 'left' }) => {
+  const SortableHeader = useCallback(({ field, children, align = 'left' }) => {
     const alignmentClass = align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : 'text-left';
     return (
       <th 
@@ -65,7 +75,7 @@ const Teams = () => {
         </div>
       </th>
     );
-  };
+  }, [handleSort, sortField, sortDirection]);
 
   const { data: teams, isLoading } = useQuery(
     ['teams'],
@@ -79,7 +89,7 @@ const Teams = () => {
     if (!teams) return [];
     
     let filtered = teams.filter(team =>
-      team.name.toLowerCase().includes(searchTerm.toLowerCase())
+      team.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
     );
 
     // Sort the filtered results
@@ -102,7 +112,7 @@ const Teams = () => {
     });
 
     return filtered;
-  }, [teams, searchTerm, sortField, sortDirection]);
+  }, [teams, debouncedSearchTerm, sortField, sortDirection]);
 
 
   const createMutation = useMutation(
