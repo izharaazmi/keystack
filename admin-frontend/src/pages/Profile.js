@@ -48,15 +48,20 @@ const Profile = () => {
     }
   };
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString, includeTime = true) => {
     if (!dateString) return 'Never';
-    return new Date(dateString).toLocaleDateString('en-US', {
+    const options = {
       year: 'numeric',
       month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+      day: 'numeric'
+    };
+    
+    if (includeTime) {
+      options.hour = '2-digit';
+      options.minute = '2-digit';
+    }
+    
+    return new Date(dateString).toLocaleDateString('en-US', options);
   };
 
   if (profileLoading) {
@@ -173,7 +178,7 @@ const Profile = () => {
                   <div className="ml-3">
                     <p className="text-sm font-medium text-gray-900">Member Since</p>
                     <p className="text-sm text-gray-500">
-                      {formatDate(profileData?.created_at)}
+                      {formatDate(profileData?.created_at, false)}
                     </p>
                   </div>
                 </div>
@@ -188,16 +193,24 @@ const Profile = () => {
             </div>
             <div className="p-6">
               <div className="space-y-4">
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Password</p>
-                  <p className="text-sm text-gray-500">Last updated when you change it</p>
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <Shield className="h-5 w-5 text-green-500" />
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm font-medium text-gray-900">Security Status</p>
+                    <p className="text-sm text-gray-500">Your profile is currently secure</p>
+                  </div>
                 </div>
-                <button
-                  onClick={() => setIsEditModalOpen(true)}
-                  className="w-full btn btn-outline"
-                >
-                  Change Password
-                </button>
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <Calendar className="h-5 w-5 text-blue-500" />
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm font-medium text-gray-900">Security Updates</p>
+                    <p className="text-sm text-gray-500">Any security updates or information will be published here</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

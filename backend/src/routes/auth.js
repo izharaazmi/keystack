@@ -285,7 +285,8 @@ router.get('/me', auth, async (req, res) => {
         first_name: req.user.first_name,
         last_name: req.user.last_name,
         role: req.user.role,
-        is_email_verified: req.user.is_email_verified
+        is_email_verified: req.user.is_email_verified,
+        created_at: req.user.created_at
       }
     });
   } catch (error) {
