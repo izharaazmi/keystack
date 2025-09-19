@@ -294,4 +294,83 @@ router.get('/me', auth, async (req, res) => {
   }
 });
 
+// Update current user profile
+router.put('/me', auth, async (req, res) => {
+  try {
+    const updateProfileSchema = Joi.object({
+      first_name: Joi.string().optional(),
+      last_name: Joi.string().optional(),
+      email: Joi.string().email().optional(),
+      current_password: Joi.string().optional(),
+      new_password: Joi.string().min(6).optional(),
+      confirm_password: Joi.string().valid(Joi.ref('new_password')).optional()
+    });
+
+    const { error, value } = updateProfileSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+
+    const { first_name, last_name, email, current_password, new_password, confirm_password } = value;
+
+    // Get the current user with password for verification
+    const user = await User.findByPk(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // If changing password, verify current password
+    if (new_password) {
+      if (!current_password) {
+        return res.status(400).json({ message: 'Current password is required to change password' });
+      }
+
+      const isCurrentPasswordValid = await user.comparePassword(current_password);
+      if (!isCurrentPasswordValid) {
+        return res.status(400).json({ message: 'Current password is incorrect' });
+      }
+    }
+
+    // Prepare update data
+    const updateData = {};
+    if (first_name !== undefined) updateData.first_name = first_name;
+    if (last_name !== undefined) updateData.last_name = last_name;
+    if (email !== undefined) updateData.email = email;
+    if (new_password !== undefined) updateData.password = new_password;
+
+    // If email is being changed, reset email verification
+    if (email && email !== user.email) {
+      updateData.is_email_verified = false;
+      updateData.emailVerificationToken = user.generateEmailVerificationToken();
+    }
+
+    // Update the user
+    await user.update(updateData);
+
+    // Get updated user without password
+    const updatedUser = await User.findByPk(req.user.id, {
+      attributes: { exclude: ['password', 'emailVerificationToken'] }
+    });
+
+    res.json({
+      message: 'Profile updated successfully',
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        first_name: updatedUser.first_name,
+        last_name: updatedUser.last_name,
+        role: updatedUser.role,
+        is_email_verified: updatedUser.is_email_verified
+      }
+    });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      res.status(400).json({ message: 'Email already exists' });
+    } else {
+      res.status(500).json({ message: 'Server error' });
+    }
+  }
+});
+
 export default router;

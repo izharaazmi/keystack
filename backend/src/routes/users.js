@@ -13,7 +13,9 @@ const updateUserSchema = Joi.object({
 	last_name: Joi.string().optional(),
 	email: Joi.string().email().optional(),
 	role: Joi.number().integer().min(0).max(10).optional(),
-	state: Joi.number().integer().min(-2).max(10).optional()
+	state: Joi.number().integer().min(-2).max(10).optional(),
+	new_password: Joi.string().min(6).optional(),
+	confirm_password: Joi.string().valid(Joi.ref('new_password')).optional()
 });
 
 // Get all users (admin only)
@@ -235,6 +237,13 @@ router.put('/:id', auth, async (req, res) => {
     if (value.email && value.email !== user.email) {
       value.is_email_verified = false;
       value.emailVerificationToken = user.generateEmailVerificationToken();
+    }
+
+    // Handle password change
+    if (value.new_password) {
+      value.password = value.new_password;
+      delete value.new_password;
+      delete value.confirm_password;
     }
 
     await user.update(value);

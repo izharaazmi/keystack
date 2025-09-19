@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
 
-const EditUserModal = ({
+const ProfileEditModal = ({
   isOpen, 
   onClose, 
   user, 
@@ -12,6 +12,7 @@ const EditUserModal = ({
     first_name: '',
     last_name: '',
     email: '',
+    current_password: '',
     new_password: '',
     confirm_password: ''
   });
@@ -26,6 +27,7 @@ const EditUserModal = ({
         first_name: user.first_name || '',
         last_name: user.last_name || '',
         email: user.email || '',
+        current_password: '',
         new_password: '',
         confirm_password: ''
       });
@@ -69,6 +71,10 @@ const EditUserModal = ({
 
     // Password validation only if changing password
     if (showPasswordFields) {
+      if (!formData.current_password) {
+        newErrors.current_password = 'Current password is required';
+      }
+
       if (!formData.new_password) {
         newErrors.new_password = 'New password is required';
       } else if (formData.new_password.length < 6) {
@@ -76,7 +82,7 @@ const EditUserModal = ({
       }
 
       if (!formData.confirm_password) {
-        newErrors.confirm_password = 'Please confirm the new password';
+        newErrors.confirm_password = 'Please confirm your new password';
       } else if (formData.new_password !== formData.confirm_password) {
         newErrors.confirm_password = 'Passwords do not match';
       }
@@ -98,6 +104,7 @@ const EditUserModal = ({
       };
 
       if (showPasswordFields) {
+        submitData.current_password = formData.current_password;
         submitData.new_password = formData.new_password;
         submitData.confirm_password = formData.confirm_password;
       }
@@ -111,6 +118,7 @@ const EditUserModal = ({
       first_name: '',
       last_name: '',
       email: '',
+      current_password: '',
       new_password: '',
       confirm_password: ''
     });
@@ -124,12 +132,14 @@ const EditUserModal = ({
     // Clear password fields when toggling
     setFormData(prev => ({
       ...prev,
+      current_password: '',
       new_password: '',
       confirm_password: ''
     }));
     // Clear password errors
     setErrors(prev => ({
       ...prev,
+      current_password: '',
       new_password: '',
       confirm_password: ''
     }));
@@ -139,7 +149,7 @@ const EditUserModal = ({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title={`Edit User - ${user?.first_name} ${user?.last_name}`}
+      title="Edit Profile"
       size="md"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -196,7 +206,6 @@ const EditUserModal = ({
           )}
         </div>
 
-
         {formData.email !== user?.email && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
             <div className="flex">
@@ -207,7 +216,7 @@ const EditUserModal = ({
               </div>
               <div className="ml-3">
                 <p className="text-sm text-yellow-800">
-                  Changing the email address will require the user to verify their new email.
+                  Changing the email address will require you to verify your new email.
                 </p>
               </div>
             </div>
@@ -229,6 +238,23 @@ const EditUserModal = ({
 
           {showPasswordFields && (
             <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Current Password *
+                </label>
+                <input
+                  type="password"
+                  name="current_password"
+                  value={formData.current_password}
+                  onChange={handleChange}
+                  className={`input w-full ${errors.current_password ? 'border-red-500' : ''}`}
+                  placeholder="Enter current password"
+                />
+                {errors.current_password && (
+                  <p className="mt-1 text-sm text-red-600">{errors.current_password}</p>
+                )}
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   New Password *
@@ -279,7 +305,7 @@ const EditUserModal = ({
             disabled={isLoading}
             className="btn btn-primary"
           >
-            {isLoading ? 'Updating...' : 'Update'}
+            {isLoading ? 'Updating...' : 'Update Profile'}
           </button>
         </div>
       </form>
@@ -287,4 +313,4 @@ const EditUserModal = ({
   );
 };
 
-export default EditUserModal;
+export default ProfileEditModal;

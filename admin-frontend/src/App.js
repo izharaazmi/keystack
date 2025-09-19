@@ -10,6 +10,7 @@ import Credentials from './pages/Credentials';
 import Projects from './pages/Projects';
 import Users from './pages/Users';
 import Teams from './pages/Teams';
+import Profile from './pages/Profile';
 import Layout from './components/Layout';
 
 const queryClient = new QueryClient({
@@ -43,6 +44,7 @@ function App() {
 								<Route path="projects" element={<Projects />} />
 								<Route path="users" element={<Users />} />
 								<Route path="teams" element={<Teams />} />
+								<Route path="profile" element={<Profile />} />
 							</Route>
 						</Routes>
 						<Toaster position="top-right" />

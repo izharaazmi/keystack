@@ -8,7 +8,8 @@ import {
 	UserCheck,
 	Menu,
 	X,
-	LogOut
+	LogOut,
+	User
 } from 'lucide-react';
 import {useAuth} from '../contexts/AuthContext';
 
@@ -98,18 +99,24 @@ const Layout = () => {
             </nav>
           </div>
           <div className="flex-shrink-0 flex border-t border-gray-200 p-4">
-            <div className="flex items-center">
-              <div className="ml-3">
-                <p className="text-sm font-medium text-gray-700">{user?.first_name} {user?.last_name}</p>
-                <p className="text-xs text-gray-500">{user?.email}</p>
-              </div>
+            <div className="flex items-center flex-1">
+              <Link
+                to="/profile"
+                className="flex items-center flex-1 hover:bg-gray-50 rounded-md p-2 -m-2"
+              >
+                <User className="h-5 w-5 text-gray-400" />
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-gray-700">{user?.first_name} {user?.last_name}</p>
+                  <p className="text-xs text-gray-500">{user?.email}</p>
+                </div>
+              </Link>
             </div>
             <button
               onClick={logout}
-              className="ml-auto flex items-center px-3 py-2 text-sm text-gray-600 hover:text-gray-900"
+              className="flex items-center p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md"
+              title="Logout"
             >
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
+              <LogOut className="h-5 w-5" />
             </button>
           </div>
         </div>
