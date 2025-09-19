@@ -350,121 +350,134 @@ const Credentials = () => {
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setShowModal(false)} />
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full lg:max-w-5xl">
               <form onSubmit={handleSubmit(onSubmit)}>
                 <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">
                     {editingCredential ? 'Edit Credential' : 'Add New Credential'}
                   </h3>
                   
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Label</label>
-                      <input
-                        {...register('label', { required: 'Label is required' })}
-                        className="input mt-1"
-                        placeholder="e.g., Production Database"
-                      />
-                      {errors.label && <p className="mt-1 text-sm text-red-600">{errors.label.message}</p>}
+                  <div className="space-y-6">
+                    {/* Basic Information Row */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Label *</label>
+                        <input
+                          {...register('label', { required: 'Label is required' })}
+                          className="input mt-1"
+                          placeholder="e.g., Production Database"
+                        />
+                        {errors.label && <p className="mt-1 text-sm text-red-600">{errors.label.message}</p>}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Project</label>
+                        <div className="mt-1 flex rounded-md shadow-sm">
+                          {projectInputMode === 'select' ? (
+                            <select
+                              {...register('project_id')}
+                              className="input rounded-r-none w-full"
+                              defaultValue=""
+                            >
+                              <option value="">No Project</option>
+                              {projects?.map((project) => (
+                                <option key={project.id} value={project.id}>
+                                  {project.name}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <input
+                              {...register('project_name')}
+                              className="input rounded-r-none"
+                              placeholder="Enter new project name"
+                            />
+                          )}
+                          <button
+                            type="button"
+                            onClick={handleProjectModeToggle}
+                            className="relative -ml-px inline-flex items-center px-3 py-2 border border-gray-300 bg-gray-50 text-gray-500 text-sm hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 rounded-r-md"
+                            title={projectInputMode === 'select' ? 'Enter new project' : 'Select existing project'}
+                          >
+                            {projectInputMode === 'select' ? (
+                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                              </svg>
+                            ) : (
+                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            )}
+                          </button>
+                        </div>
+                        <p className="mt-1 text-xs text-gray-500">
+                          {projectInputMode === 'select' 
+                            ? 'Select an existing project or click + to create a new one'
+                            : 'Enter a new project name or click ▼ to select existing'
+                          }
+                        </p>
+                      </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">URL</label>
-                      <input
-                        {...register('url', { required: 'URL is required' })}
-                        type="url"
-                        className="input mt-1"
-                        placeholder="https://example.com"
-                      />
-                      {errors.url && <p className="mt-1 text-sm text-red-600">{errors.url.message}</p>}
+                    {/* URL Information Row */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">URL *</label>
+                        <input
+                          {...register('url', { required: 'URL is required' })}
+                          type="url"
+                          className="input mt-1"
+                          placeholder="https://example.com"
+                        />
+                        {errors.url && <p className="mt-1 text-sm text-red-600">{errors.url.message}</p>}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">URL Pattern (optional)</label>
+                        <input
+                          {...register('url_pattern')}
+                          className="input mt-1"
+                          placeholder="*.example.com"
+                        />
+                        <p className="mt-1 text-xs text-gray-500">
+                          Used for pattern matching in the browser extension
+                        </p>
+                      </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">URL Pattern (optional)</label>
-                      <input
-                        {...register('url_pattern')}
-                        className="input mt-1"
-                        placeholder="*.example.com"
-                      />
+                    {/* Credentials Row */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Username *</label>
+                        <input
+                          {...register('username', { required: 'Username is required' })}
+                          className="input mt-1"
+                          placeholder="admin"
+                        />
+                        {errors.username && <p className="mt-1 text-sm text-red-600">{errors.username.message}</p>}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Password *</label>
+                        <input
+                          {...register('password', { required: 'Password is required' })}
+                          type="password"
+                          className="input mt-1"
+                          placeholder="••••••••"
+                        />
+                        {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>}
+                      </div>
                     </div>
 
+                    {/* Description Row - Full Width */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Username</label>
-                      <input
-                        {...register('username', { required: 'Username is required' })}
-                        className="input mt-1"
-                        placeholder="admin"
-                      />
-                      {errors.username && <p className="mt-1 text-sm text-red-600">{errors.username.message}</p>}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Password</label>
-                      <input
-                        {...register('password', { required: 'Password is required' })}
-                        type="password"
-                        className="input mt-1"
-                        placeholder="••••••••"
-                      />
-                      {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Description</label>
+                      <label className="block text-sm font-medium text-gray-700">Description (optional)</label>
                       <textarea
                         {...register('description')}
                         rows={3}
                         className="input mt-1"
-                        placeholder="Optional description"
+                        placeholder="Optional description or notes about this credential"
                       />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Project</label>
-                      <div className="mt-1 flex rounded-md shadow-sm">
-                        {projectInputMode === 'select' ? (
-                          <select
-                            {...register('project_id')}
-                            className="input rounded-r-none w-full min-w-64"
-                            defaultValue=""
-                          >
-                            <option value="">No Project</option>
-                            {projects?.map((project) => (
-                              <option key={project.id} value={project.id}>
-                                {project.name}
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <input
-                            {...register('project_name')}
-                            className="input rounded-r-none"
-                            placeholder="Enter new project name"
-                          />
-                        )}
-                        <button
-                          type="button"
-                          onClick={handleProjectModeToggle}
-                          className="relative -ml-px inline-flex items-center px-3 py-2 border border-gray-300 bg-gray-50 text-gray-500 text-sm hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 rounded-r-md"
-                          title={projectInputMode === 'select' ? 'Enter new project' : 'Select existing project'}
-                        >
-                          {projectInputMode === 'select' ? (
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                            </svg>
-                          ) : (
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                          )}
-                        </button>
-                      </div>
-                      <p className="mt-1 text-xs text-gray-500">
-                        {projectInputMode === 'select' 
-                          ? 'Select an existing project or click + to create a new one'
-                          : 'Enter a new project name or click ▼ to select existing'
-                        }
-                      </p>
                     </div>
 
                   </div>
