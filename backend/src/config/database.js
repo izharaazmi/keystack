@@ -12,7 +12,7 @@ const sequelize = new Sequelize({
 	database: process.env.DB_NAME || 'chrome_pass',
 	username: process.env.DB_USER || 'root',
 	password: process.env.DB_PASSWORD || '',
-	logging: process.env.NODE_ENV === 'development' ? console.log : false,
+	logging: false,
 	define: {
 		timestamps: true,
 		underscored: true,
@@ -44,7 +44,7 @@ const connectDB = async () => {
 			console.log('Database already exists, skipping table creation');
 		}
 	} catch (error) {
-		console.error('Database connection error:', error);
+		console.error('Database connection error:', error.message);
 		process.exit(1);
 	}
 };

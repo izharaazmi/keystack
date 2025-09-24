@@ -4,6 +4,7 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import {connectDB} from './config/database.js';
+import {checkDatabaseHealth, quickHealthCheck} from './utils/dbHealth.js';
 
 import authRoutes from './routes/auth.js';
 import credentialRoutes from './routes/credentials.js';
@@ -64,8 +65,36 @@ app.use('/api/users', userRoutes);
 app.use('/api/projects', projectRoutes);
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
-	res.json({status: 'OK', timestamp: new Date().toISOString()});
+app.get('/api/health', async (req, res) => {
+	try {
+		const health = await quickHealthCheck();
+		res.json({
+			...health,
+			timestamp: new Date().toISOString(),
+			uptime: process.uptime()
+		});
+	} catch (error) {
+		res.status(500).json({
+			status: 'unhealthy',
+			error: error.message,
+			timestamp: new Date().toISOString()
+		});
+	}
+});
+
+// Detailed database health check endpoint
+app.get('/api/health/database', async (req, res) => {
+	try {
+		const health = await checkDatabaseHealth();
+		const statusCode = health.status === 'healthy' ? 200 : 503;
+		res.status(statusCode).json(health);
+	} catch (error) {
+		res.status(500).json({
+			status: 'unhealthy',
+			error: error.message,
+			timestamp: new Date().toISOString()
+		});
+	}
 });
 
 // Error handling middleware
