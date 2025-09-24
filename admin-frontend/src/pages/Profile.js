@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import {useMutation, useQuery, useQueryClient} from 'react-query';
 import {useNavigate, useSearchParams} from 'react-router-dom';
 import ProfileEditModal from '../components/ProfileEditModal';
+import EditUserModal from '../components/EditUserModal';
 import AssignmentsTab from '../components/AssignmentsTab';
 import {useAuth} from '../contexts/AuthContext';
 import {api} from '../utils/api';
@@ -13,6 +14,7 @@ const Profile = ({ userId = null }) => {
 	const navigate = useNavigate();
 	const [searchParams] = useSearchParams();
 	const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+	const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
 	const [activeTab, setActiveTab] = useState('profile');
 	const queryClient = useQueryClient();
@@ -102,12 +104,40 @@ const Profile = ({ userId = null }) => {
 		}
 	);
 
+	// Update user mutation (for editing other users)
+	const updateUserMutation = useMutation(
+		({userId, userData}) => api.put(`/users/${userId}`, userData),
+		{
+			onSuccess: () => {
+				queryClient.invalidateQueries('users');
+				queryClient.invalidateQueries(['user', userId]);
+				setIsEditUserModalOpen(false);
+				toast.success('User updated successfully');
+			},
+			onError: (error) => {
+				toast.error(error.response?.data?.message || 'Failed to update user');
+			}
+		}
+	);
+
 	const handleUpdateProfile = async (formData) => {
 		setIsLoading(true);
 		try {
 			await updateProfileMutation.mutateAsync(formData);
 		} catch (error) {
 			console.error('Profile update error:', error);
+		} finally {
+			setIsLoading(false);
+		}
+	};
+
+	const handleUpdateUser = async (formData) => {
+		if (!userId) return;
+		setIsLoading(true);
+		try {
+			await updateUserMutation.mutateAsync({userId, userData: formData});
+		} catch (error) {
+			console.error('User update error:', error);
 		} finally {
 			setIsLoading(false);
 		}
@@ -199,13 +229,13 @@ const Profile = ({ userId = null }) => {
 							</p>
 						</div>
 					</div>
-					{activeTab === 'profile' && !isViewingOtherUser && (
+					{activeTab === 'profile' && (
 						<button
-							onClick={() => setIsEditModalOpen(true)}
+							onClick={() => isViewingOtherUser ? setIsEditUserModalOpen(true) : setIsEditModalOpen(true)}
 							className="btn btn-primary flex items-center"
 						>
 							<Edit3 className="h-4 w-4 mr-2"/>
-							Edit Profile
+							{isViewingOtherUser ? 'Edit User' : 'Edit Profile'}
 						</button>
 					)}
 				</div>
@@ -431,6 +461,17 @@ const Profile = ({ userId = null }) => {
 					onClose={() => setIsEditModalOpen(false)}
 					user={profileData}
 					onUpdate={handleUpdateProfile}
+					isLoading={isLoading}
+				/>
+			)}
+
+			{/* Edit User Modal */}
+			{displayUser && isViewingOtherUser && (
+				<EditUserModal
+					isOpen={isEditUserModalOpen}
+					onClose={() => setIsEditUserModalOpen(false)}
+					user={displayUser}
+					onUpdate={handleUpdateUser}
 					isLoading={isLoading}
 				/>
 			)}

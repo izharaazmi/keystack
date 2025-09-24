@@ -177,6 +177,8 @@ const Users = () => {
 		                               onSelectUser,
 		                               onToggleStatus,
 		                               onRoleChange,
+		                               onViewProfile,
+		                               onViewAssignments,
 		                               updateUserRoleLoading,
 		                               pagination,
 		                               currentPage,
@@ -235,10 +237,16 @@ const Users = () => {
 								</td>
 								<td className="font-medium">
 									<div className="flex items-center">
-										<span>{user.first_name} {user.last_name}</span>
+										<button
+											onClick={() => onViewProfile(user)}
+											className="text-left hover:text-blue-600 hover:underline transition-colors cursor-pointer"
+											title="View profile"
+										>
+											{user.first_name} {user.last_name}
+										</button>
 										<div className="flex items-center ml-2 space-x-1">
 											<button
-												onClick={() => handleViewAssignments(user)}
+												onClick={() => onViewAssignments(user)}
 												className="p-1 text-gray-400 hover:text-green-600 transition-colors relative group"
 												title="View assignments"
 											>
@@ -664,6 +672,10 @@ const Users = () => {
 		navigate(`/profile?userId=${user.id}&tab=assignments`);
 	}, [navigate]);
 
+	const handleViewProfile = useCallback((user) => {
+		navigate(`/profile?userId=${user.id}`);
+	}, [navigate]);
+
 	const handleUpdateUser = useCallback((formData) => {
 		if (!editingUser) return;
 		updateUserMutation.mutate({userId: editingUser.id, userData: formData});
@@ -882,6 +894,8 @@ const Users = () => {
 				onSelectUser={handleUserSelect}
 				onToggleStatus={handleUserToggleStatus}
 				onRoleChange={handleUserRoleChange}
+				onViewProfile={handleViewProfile}
+				onViewAssignments={handleViewAssignments}
 				updateUserRoleLoading={updateUserRoleMutation.isLoading}
 				pagination={pagination}
 				currentPage={currentPage}
