@@ -18,6 +18,11 @@ const Layout = () => {
 		localStorage.setItem('sidebarCollapsed', JSON.stringify(sidebarCollapsed));
 	}, [sidebarCollapsed]);
 
+	// Update document title
+	useEffect(() => {
+		document.title = 'KeyStack - Where Security Meets Simplicity';
+	}, []);
+
 	// Tooltip component
 	const Tooltip = () => {
 		if (!tooltip.show) return null;
@@ -81,7 +86,7 @@ const Layout = () => {
 					</div>
 					<div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
 						<div className="flex-shrink-0 flex items-center px-4">
-							<h1 className="text-xl font-bold text-gray-900">Chrome Pass Admin</h1>
+							<h1 className="text-xl font-bold text-gray-900">KeyStack</h1>
 						</div>
 						<nav className="mt-5 px-2 space-y-1">
 							{navigation.map((item) => {
@@ -112,42 +117,31 @@ const Layout = () => {
 				<div className="flex-1 flex flex-col min-h-0 border-r border-gray-200 bg-white">
 					<div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
 						<div className="flex items-center justify-between flex-shrink-0 px-4">
-							<div className="flex items-center">
-								{!sidebarCollapsed ? (
-									<div className="flex items-center space-x-3">
+							{!sidebarCollapsed ? (
+								<div className="flex flex-col space-y-1 flex-1 min-w-0 pr-2">
+									<h1 className="text-2xl font-bold text-gray-900 truncate">KeyStack</h1>
+									<p className="text-xs text-gray-500 truncate">Where Security Meets Simplicity</p>
+								</div>
+							) : (
+								<div className="flex flex-col items-center flex-1">
+									<div className="w-8 h-8 flex items-center justify-center mb-1">
 										<img 
 											src="/images/codeacious.png" 
 											alt="Codeacious Technologies" 
 											className="w-8 h-8 object-contain"
 										/>
-										<div className="flex flex-col">
-											<h1 className="text-xl font-bold text-gray-900">Chrome Pass Admin</h1>
-											<p className="text-xs text-gray-500">by Codeacious Technologies</p>
-										</div>
 									</div>
-								) : (
-									<div className="flex flex-col items-center">
-										<div className="w-8 h-8 flex items-center justify-center mb-1">
-											<img 
-												src="/images/codeacious.png" 
-												alt="Codeacious Technologies" 
-												className="w-8 h-8 object-contain"
-											/>
-										</div>
-									</div>
-								)}
-							</div>
-							<button
-								onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-								className="p-1.5 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-								title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-							>
-								{sidebarCollapsed ? (
-									<ChevronRight className="h-5 w-5" />
-								) : (
-									<ChevronLeft className="h-5 w-5" />
-								)}
-							</button>
+								</div>
+							)}
+							{!sidebarCollapsed && (
+								<button
+									onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+									className="p-1 rounded-md text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-colors flex-shrink-0 -mt-1"
+									title="Collapse sidebar"
+								>
+									<ChevronLeft className="h-4 w-4" />
+								</button>
+							)}
 						</div>
 						<nav className="mt-5 flex-1 px-2 space-y-1">
 							{navigation.map((item) => {
@@ -204,6 +198,19 @@ const Layout = () => {
 
 			{/* Main content */}
 			<div className={`flex flex-col flex-1 transition-all duration-300 ${sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-64'}`}>
+				{/* Desktop sidebar toggle - floating button (only when collapsed) */}
+				{sidebarCollapsed && (
+					<button
+						onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+						className="hidden lg:block fixed top-0 z-20 p-1.5 bg-white text-gray-600 hover:text-gray-800 hover:bg-gray-50 transition-all duration-200 rounded-bl-md shadow-sm border border-gray-200"
+						style={{ left: '4rem' }}
+						title="Expand sidebar"
+					>
+						<ChevronRight className="h-4 w-4" />
+					</button>
+				)}
+				
+				{/* Mobile sidebar toggle */}
 				<div className="sticky top-0 z-10 lg:hidden pl-1 pt-1 sm:pl-3 sm:pt-3 bg-gray-50">
 					<button
 						type="button"
