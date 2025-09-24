@@ -207,7 +207,7 @@ router.get('/:id/users', auth, async (req, res) => {
 
 		// Get directly assigned users
 		const projectUsers = await ProjectUser.findAll({
-			where: {project_id: id},
+			where: {projectId: id},
 			include: [
 				{model: User, as: 'User', attributes: ['id', 'first_name', 'last_name', 'email']}
 			]
@@ -215,7 +215,7 @@ router.get('/:id/users', auth, async (req, res) => {
 
 		// Get teams assigned to this project
 		const projectGroups = await ProjectGroup.findAll({
-			where: {project_id: id},
+			where: {projectId: id},
 			include: [
 				{
 					model: Group,
@@ -281,7 +281,7 @@ router.get('/:id/teams', auth, async (req, res) => {
 		}
 
 		const projectGroups = await ProjectGroup.findAll({
-			where: {project_id: id},
+			where: {projectId: id},
 			include: [
 				{model: Group, as: 'Group', attributes: ['id', 'name', 'description']}
 			]
@@ -322,7 +322,7 @@ router.post('/:id/users', auth, async (req, res) => {
 
 		// Check if assignment already exists
 		const existingAssignment = await ProjectUser.findOne({
-			where: {project_id: id, user_id: userId}
+			where: {projectId: id, userId: userId}
 		});
 
 		if (existingAssignment) {
@@ -330,8 +330,8 @@ router.post('/:id/users', auth, async (req, res) => {
 		}
 
 		await ProjectUser.create({
-			project_id: id,
-			user_id: userId
+			projectId: id,
+			userId: userId
 		});
 
 		res.json({message: 'User assigned successfully'});
@@ -368,7 +368,7 @@ router.post('/:id/teams', auth, async (req, res) => {
 
 		// Check if assignment already exists
 		const existingAssignment = await ProjectGroup.findOne({
-			where: {project_id: id, group_id: teamId}
+			where: {projectId: id, groupId: teamId}
 		});
 
 		if (existingAssignment) {
@@ -376,8 +376,8 @@ router.post('/:id/teams', auth, async (req, res) => {
 		}
 
 		await ProjectGroup.create({
-			project_id: id,
-			group_id: teamId
+			projectId: id,
+			groupId: teamId
 		});
 
 		res.json({message: 'Team assigned successfully'});
@@ -402,7 +402,7 @@ router.delete('/:id/users/:userId', auth, async (req, res) => {
 		}
 
 		const assignment = await ProjectUser.findOne({
-			where: {project_id: id, user_id: userId}
+			where: {projectId: id, userId: userId}
 		});
 
 		if (!assignment) {
@@ -432,7 +432,7 @@ router.delete('/:id/teams/:teamId', auth, async (req, res) => {
 		}
 
 		const assignment = await ProjectGroup.findOne({
-			where: {project_id: id, group_id: teamId}
+			where: {projectId: id, groupId: teamId}
 		});
 
 		if (!assignment) {

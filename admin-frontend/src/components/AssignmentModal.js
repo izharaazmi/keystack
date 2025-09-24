@@ -171,12 +171,12 @@ const AssignmentModal = ({
 	};
 
 	const handleAssignUsers = () => {
-		if (selectedUsers.length === 0) return;
+		if (selectedUsers.length === 0 || assignUsersMutation.isLoading) return;
 		assignUsersMutation.mutate(selectedUsers.map(u => u.id));
 	};
 
 	const handleAssignTeams = () => {
-		if (selectedTeams.length === 0) return;
+		if (selectedTeams.length === 0 || assignTeamsMutation.isLoading) return;
 		assignTeamsMutation.mutate(selectedTeams.map(t => t.id));
 	};
 
@@ -322,20 +322,20 @@ const AssignmentModal = ({
 									<button
 										onClick={handleAssignUsers}
 										disabled={assignUsersMutation.isLoading}
-										className="btn btn-primary w-full mt-3 flex items-center justify-center"
+										className="btn btn-primary w-full mt-3 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
 									>
 										<UserPlus className="h-4 w-4 mr-2"/>
-										Assign {selectedUsers.length} User{selectedUsers.length > 1 ? 's' : ''}
+										{assignUsersMutation.isLoading ? 'Assigning...' : `Assign ${selectedUsers.length} User${selectedUsers.length > 1 ? 's' : ''}`}
 									</button>
 								)}
 								{selectedTab === 'teams' && selectedTeams.length > 0 && (
 									<button
 										onClick={handleAssignTeams}
 										disabled={assignTeamsMutation.isLoading}
-										className="btn btn-primary w-full mt-3 flex items-center justify-center"
+										className="btn btn-primary w-full mt-3 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
 									>
 										<UserPlus className="h-4 w-4 mr-2"/>
-										Assign {selectedTeams.length} Team{selectedTeams.length > 1 ? 's' : ''}
+										{assignTeamsMutation.isLoading ? 'Assigning...' : `Assign ${selectedTeams.length} Team${selectedTeams.length > 1 ? 's' : ''}`}
 									</button>
 								)}
 							</div>
