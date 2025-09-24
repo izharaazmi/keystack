@@ -53,6 +53,10 @@ CredentialUser.belongsTo(Credential, {foreignKey: 'credentialId', as: 'Credentia
 CredentialGroup.belongsTo(Group, {foreignKey: 'groupId', as: 'Group'});
 CredentialGroup.belongsTo(Credential, {foreignKey: 'credentialId', as: 'Credential'});
 
+// UserGroup associations
+UserGroup.belongsTo(User, {foreignKey: 'userId', as: 'User'});
+UserGroup.belongsTo(Group, {foreignKey: 'groupId', as: 'Group'});
+
 export {
 	User,
 	Credential,

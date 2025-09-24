@@ -474,4 +474,75 @@ router.patch('/:id/state', adminAuth, async (req, res) => {
 	}
 });
 
+// Get all teams for a specific user (admin only)
+router.get('/:id/teams', adminAuth, async (req, res) => {
+	try {
+		const {id} = req.params;
+
+		// Check if user exists
+		const user = await User.findByPk(id);
+		if (!user) {
+			return res.status(404).json({message: 'User not found'});
+		}
+
+		// Get user's team memberships
+		const userGroups = await UserGroup.findAll({
+			where: {userId: id},
+			include: [
+				{
+					model: Group,
+					as: 'Group',
+					attributes: ['id', 'name', 'description', 'is_active', 'created_at'],
+					include: [
+						{
+							model: User,
+							as: 'createdBy',
+							attributes: ['first_name', 'last_name', 'email']
+						}
+					]
+				}
+			]
+		});
+
+		// Format the response
+		const teams = userGroups.map(ug => ({
+			...ug.Group.dataValues,
+			joinedAt: ug.created_at
+		}));
+
+		res.json({teams});
+	} catch (error) {
+		res.status(500).json({message: 'Server error'});
+	}
+});
+
+// Remove user from team (admin only)
+router.delete('/:id/teams/:teamId', adminAuth, async (req, res) => {
+	try {
+		const {id, teamId} = req.params;
+
+		// Check if user exists
+		const user = await User.findByPk(id);
+		if (!user) {
+			return res.status(404).json({message: 'User not found'});
+		}
+
+		// Check if user is a member of this team
+		const userGroup = await UserGroup.findOne({
+			where: {userId: id, groupId: teamId}
+		});
+
+		if (!userGroup) {
+			return res.status(404).json({message: 'User is not a member of this team'});
+		}
+
+		// Remove the user from the team
+		await userGroup.destroy();
+
+		res.json({message: 'Successfully removed user from team'});
+	} catch (error) {
+		res.status(500).json({message: 'Server error'});
+	}
+});
+
 export default router;
