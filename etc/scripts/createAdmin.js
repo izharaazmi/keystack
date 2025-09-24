@@ -6,7 +6,7 @@ const createAdminUser = async () => {
 		await connectDB();
 
 		// Check if admin already exists
-		const existingAdmin = await User.findOne({where: {role: 'admin'}});
+		const existingAdmin = await User.findOne({where: {role: 1}});
 		if (existingAdmin) {
 			console.log('Admin user already exists:', existingAdmin.email);
 			process.exit(0);
@@ -18,7 +18,7 @@ const createAdminUser = async () => {
 			password: 'admin123',
 			firstName: 'Admin',
 			lastName: 'User',
-			role: 'admin',
+			role: 1,
 			isEmailVerified: true // Skip email verification for initial admin
 		});
 

@@ -25,15 +25,15 @@ CREATE TABLE `cp_users`
     `last_name`                VARCHAR(100) NOT NULL,
     `is_email_verified`        BOOLEAN                DEFAULT FALSE,
     `email_verification_token` VARCHAR(255) NULL,
-    `role`                     ENUM ('admin', 'user') DEFAULT 'user',
-    `is_active`                BOOLEAN                DEFAULT TRUE,
+    `role`                     INT                     DEFAULT 0,
+    `state`                    INT                     DEFAULT 0,
     `last_login`               TIMESTAMP    NULL,
     `created_at`               TIMESTAMP              DEFAULT CURRENT_TIMESTAMP,
     `updated_at`               TIMESTAMP              DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
     INDEX `idx_email` (`email`),
     INDEX `idx_role` (`role`),
-    INDEX `idx_is_active` (`is_active`),
+    INDEX `idx_state` (`state`),
     INDEX `idx_created_at` (`created_at`)
 );
 
@@ -146,22 +146,32 @@ CREATE TABLE `cp_credential_groups`
 );
 
 -- Insert default admin user
-INSERT INTO `cp_users` (`email`, `password`, `first_name`, `last_name`, `is_email_verified`, `role`, `is_active`)
+INSERT INTO `cp_users` (`email`, `password`, `first_name`, `last_name`, `is_email_verified`, `role`, `state`)
 VALUES ('admin@keystack.com',
         '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj4J/8Qz8K2O', -- 'admin123' hashed
         'Admin',
         'User',
         TRUE,
-        'admin',
-        TRUE);
+        1, -- Admin role (integer)
+        1); -- Active state
+
+-- Insert your user account
+INSERT INTO `cp_users` (`email`, `password`, `first_name`, `last_name`, `is_email_verified`, `role`, `state`)
+VALUES ('izhar@codeacious.tech',
+        '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj4J/8Qz8K2O', -- 'admin123' hashed
+        'Izhar',
+        'Azmi',
+        TRUE,
+        1, -- Admin role (integer)
+        1); -- Active state
 
 -- Insert sample users
-INSERT INTO `cp_users` (`email`, `password`, `first_name`, `last_name`, `is_email_verified`, `role`, `is_active`)
-VALUES ('john.doe@company.com', '$2a$12$c0eptKHtO8T83vn6NJNmFeHXSnoJdKs6kpUIs7PFE2Uu25NFG5xK2', 'John', 'Doe', TRUE, 'user', TRUE),
-       ('jane.smith@company.com', '$2a$12$6V5dBg0GnqBK4KkfmQOLIeHEUDl6/Fcoo/R58YaJ6CRezoDab98Ki', 'Jane', 'Smith', TRUE, 'user', TRUE),
-       ('mike.johnson@company.com', '$2a$12$/4IRld4WZbUXsDsu4BLVWu6ayr9DG24vrcnqmAcBq2YwSyieqnE26', 'Mike', 'Johnson', TRUE, 'user', TRUE),
-       ('sarah.wilson@company.com', '$2a$12$8K9mN2pQ5rT7vXwYzA1bCdEfGhIjKlMnOpQrStUvWxYzA1bCdEfGh', 'Sarah', 'Wilson', TRUE, 'user', TRUE),
-       ('david.brown@company.com', '$2a$12$9L0nO3qR6sU8wXzYbB2cDeFgHiJkLmNoPrStVwXzYbB2cDeFgHiJk', 'David', 'Brown', TRUE, 'user', TRUE);
+INSERT INTO `cp_users` (`email`, `password`, `first_name`, `last_name`, `is_email_verified`, `role`, `state`)
+VALUES ('john.doe@company.com', '$2a$12$c0eptKHtO8T83vn6NJNmFeHXSnoJdKs6kpUIs7PFE2Uu25NFG5xK2', 'John', 'Doe', TRUE, 0, 1),
+       ('jane.smith@company.com', '$2a$12$6V5dBg0GnqBK4KkfmQOLIeHEUDl6/Fcoo/R58YaJ6CRezoDab98Ki', 'Jane', 'Smith', TRUE, 0, 1),
+       ('mike.johnson@company.com', '$2a$12$/4IRld4WZbUXsDsu4BLVWu6ayr9DG24vrcnqmAcBq2YwSyieqnE26', 'Mike', 'Johnson', TRUE, 0, 1),
+       ('sarah.wilson@company.com', '$2a$12$8K9mN2pQ5rT7vXwYzA1bCdEfGhIjKlMnOpQrStUvWxYzA1bCdEfGh', 'Sarah', 'Wilson', TRUE, 0, 1),
+       ('david.brown@company.com', '$2a$12$9L0nO3qR6sU8wXzYbB2cDeFgHiJkLmNoPrStVwXzYbB2cDeFgHiJk', 'David', 'Brown', TRUE, 0, 1);
 
 -- Insert sample groups
 INSERT INTO `cp_groups` (`name`, `description`, `created_by_id`, `is_active`)
@@ -204,29 +214,24 @@ VALUES ('GitHub - Development Team', 'https://github.com', 'github.com/*', 'dev-
 
 -- Assign users to groups
 INSERT INTO `cp_user_groups` (`user_id`, `group_id`)
-VALUES (2, 1), -- John Doe -> Development Team
-       (3, 1), -- Jane Smith -> Development Team
-       (4, 2), -- Mike Johnson -> DevOps Team
-       (5, 3), -- Sarah Wilson -> Project Management
-       (6, 4);
--- David Brown -> Sales Team
+VALUES (3, 1), -- John Doe -> Development Team
+       (4, 1), -- Jane Smith -> Development Team
+       (5, 2), -- Mike Johnson -> DevOps Team
+       (6, 3), -- Sarah Wilson -> Project Management
+       (7, 4); -- David Brown -> Sales Team
 
 -- Assign credentials to groups
 INSERT INTO `cp_credential_groups` (`credential_id`, `group_id`)
 VALUES (1, 1), -- GitHub -> Development Team
        (4, 3), -- JIRA -> Project Management
        (5, 2), -- Docker Hub -> DevOps Team
-       (8, 4);
--- Salesforce -> Sales Team
+       (8, 4); -- Salesforce -> Sales Team
 
 -- Assign credentials to individual users
 INSERT INTO `cp_credential_users` (`credential_id`, `user_id`)
 VALUES (2, 1), -- AWS -> Admin
        (6, 1), -- Stripe -> Admin
-       (7, 1);
--- Google Workspace -> Admin
-
--- Note: Views will be created separately to avoid SQL parsing issues
+       (7, 1); -- Google Workspace -> Admin
 
 -- Show table creation summary
 SELECT 'Database initialization completed successfully!' as status;
