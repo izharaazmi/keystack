@@ -1,17 +1,21 @@
-# Chrome Pass Database Setup
+# KeyStack Database Setup
 
-This directory contains the MySQL database initialization scripts and configuration for Chrome Pass.
+This directory contains the MySQL database installation script for KeyStack.
 
 ## 🗄️ Database Schema
 
 ### Tables
 
-- **users** - User accounts and authentication
-- **groups** - Team/group definitions
-- **credentials** - Password credentials and access rules
-- **user_groups** - Many-to-many relationship between users and groups
-- **credential_users** - Many-to-many relationship between credentials and users
-- **credential_groups** - Many-to-many relationship between credentials and groups
+- **cp_users** - User accounts and authentication
+- **cp_groups** - Team/group definitions  
+- **cp_projects** - Project definitions
+- **cp_credentials** - Password credentials and access rules
+- **cp_user_groups** - Many-to-many relationship between users and groups
+- **cp_project_users** - Many-to-many relationship between projects and users
+- **cp_project_groups** - Many-to-many relationship between projects and groups
+- **cp_credential_users** - Many-to-many relationship between credentials and users
+- **cp_credential_groups** - Many-to-many relationship between credentials and groups
+- **cp_schema_version** - Database version tracking
 
 ### Key Features
 
@@ -46,32 +50,15 @@ cp env.example .env
 ### 4. Initialize Database
 
 ```bash
-npm run setup-db
+mysql -u root -p < install-001.sql
 ```
 
 This will:
 
-- Create the `chrome_pass` database
+- Create the `keystack` database
 - Create all tables with proper relationships
-- Insert sample data (admin user, test users, groups, credentials)
+- Insert essential admin user
 - Set up indexes for optimal performance
-
-## 📋 Manual Setup
-
-If you prefer to set up the database manually:
-
-### 1. Create Database
-
-```sql
-CREATE DATABASE chrome_pass CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE chrome_pass;
-```
-
-### 2. Run SQL Script
-
-```bash
-mysql -u root -p chrome_pass < init.sql
-```
 
 ## 🔧 Environment Variables
 
@@ -81,91 +68,93 @@ Update your `.env` file with these MySQL settings:
 # MySQL Database Configuration
 DB_HOST=localhost
 DB_PORT=3306
-DB_NAME=chrome_pass
+DB_NAME=keystack
 DB_USER=root
 DB_PASSWORD=your-mysql-password
 ```
 
-## 📊 Sample Data
+## 📊 Default Data
 
-The initialization script includes:
+The installation script includes:
 
-### Users
+### Admin User
 
-- **Admin**: admin@chromepass.com / admin123
-- **Test Users**: 5 sample users for testing
-
-### Groups
-
-- Development Team
-- DevOps Team
-- Project Management
-- Sales Team
-- Finance Team
-- IT Administration
-
-### Credentials
-
-- 8 sample credentials with different access types
-- Realistic URLs and strong passwords
-- Proper project categorization
+- **Email**: admin@keystack.com
+- **Password**: admin123
+- **Role**: Admin
+- **Status**: Active and verified
 
 ## 🔍 Database Structure
 
 ### Users Table
 
 ```sql
-CREATE TABLE users (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    email VARCHAR(255) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
-    first_name VARCHAR(100) NOT NULL,
-    last_name VARCHAR(100) NOT NULL,
-    is_email_verified BOOLEAN DEFAULT FALSE,
-    email_verification_token VARCHAR(255) NULL,
-    role ENUM('admin', 'user') DEFAULT 'user',
-    is_active BOOLEAN DEFAULT TRUE,
-    last_login TIMESTAMP NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+CREATE TABLE `cp_users` (
+`id` INT PRIMARY KEY AUTO_INCREMENT,
+`email` VARCHAR(255) NOT NULL UNIQUE,
+`password` VARCHAR(255) NOT NULL,
+`first_name` VARCHAR(100) NOT NULL,
+`last_name` VARCHAR(100) NOT NULL,
+`is_email_verified` BOOLEAN DEFAULT FALSE,
+`email_verification_token` VARCHAR(255) NULL,
+`role` INT DEFAULT 0,
+`state` INT DEFAULT 0,
+`last_login` TIMESTAMP NULL,
+`created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+`updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 ```
 
 ### Groups Table
 
 ```sql
-CREATE TABLE groups (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    name VARCHAR(100) NOT NULL,
-    description TEXT NULL,
-    created_by_id INT NOT NULL,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (created_by_id) REFERENCES users(id) ON DELETE CASCADE
+CREATE TABLE `cp_groups` (
+`id` INT PRIMARY KEY AUTO_INCREMENT,
+`name` VARCHAR(100) NOT NULL,
+`description` TEXT NULL,
+`created_by_id` INT NULL,
+`is_active` BOOLEAN DEFAULT TRUE,
+`created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+`updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+FOREIGN KEY (`created_by_id`) REFERENCES `cp_users` (`id`) ON DELETE SET NULL
+);
+```
+
+### Projects Table
+
+```sql
+CREATE TABLE `cp_projects` (
+`id` INT PRIMARY KEY AUTO_INCREMENT,
+`name` VARCHAR(100) NOT NULL UNIQUE,
+`description` TEXT NULL,
+`created_by_id` INT NULL,
+`is_active` BOOLEAN DEFAULT TRUE,
+`created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+`updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+FOREIGN KEY (`created_by_id`) REFERENCES `cp_users` (`id`) ON DELETE SET NULL
 );
 ```
 
 ### Credentials Table
 
 ```sql
-CREATE TABLE credentials (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    label VARCHAR(200) NOT NULL,
-    url VARCHAR(500) NOT NULL,
-    url_pattern VARCHAR(500) NULL,
-    username VARCHAR(255) NOT NULL,
-    password VARCHAR(500) NOT NULL,
-    description TEXT NULL,
-    project VARCHAR(100) NULL,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_by_id INT NOT NULL,
-    access_type ENUM('individual', 'group', 'all') DEFAULT 'individual',
-    last_used TIMESTAMP NULL,
-    use_count INT DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (created_by_id) REFERENCES users(id) ON DELETE CASCADE
+CREATE TABLE `cp_credentials` (
+`id` INT PRIMARY KEY AUTO_INCREMENT,
+`label` VARCHAR(200) NOT NULL,
+`url` VARCHAR(500) NOT NULL,
+`url_pattern` VARCHAR(500) NULL,
+`username` VARCHAR(255) NOT NULL,
+`password` VARCHAR(500) NOT NULL,
+`description` TEXT NULL,
+`project_id` INT NULL,
+`is_active` BOOLEAN DEFAULT TRUE,
+`created_by_id` INT NULL,
+`last_used` TIMESTAMP NULL,
+`use_count` INT DEFAULT 0,
+`created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+`updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+FOREIGN KEY (`created_by_id`) REFERENCES `cp_users` (`id`) ON DELETE SET NULL,
+FOREIGN KEY (`project_id`) REFERENCES `cp_projects` (`id`) ON DELETE SET NULL
 );
 ```
 
@@ -182,27 +171,27 @@ CREATE TABLE credentials (
 - **Indexes**: Strategic indexes on frequently queried columns
 - **Connection Pooling**: Optimized connection management
 - **Query Optimization**: Efficient JOIN operations
-- **View Creation**: Pre-computed views for complex queries
+- **Junction Tables**: Optimized many-to-many relationships
 
 ## 🛠️ Maintenance
 
 ### Backup Database
 
 ```bash
-mysqldump -u root -p chrome_pass > chrome_pass_backup.sql
+mysqldump -u root -p keystack > keystack_backup.sql
 ```
 
 ### Restore Database
 
 ```bash
-mysql -u root -p chrome_pass < chrome_pass_backup.sql
+mysql -u root -p keystack < keystack_backup.sql
 ```
 
 ### Reset Database
 
 ```bash
-mysql -u root -p -e "DROP DATABASE IF EXISTS chrome_pass;"
-npm run setup-db
+mysql -u root -p -e "DROP DATABASE IF EXISTS keystack;"
+mysql -u root -p < install-001.sql
 ```
 
 ## 🐛 Troubleshooting
@@ -210,20 +199,20 @@ npm run setup-db
 ### Common Issues
 
 1. **Connection Refused**
-    - Check if MySQL is running
-    - Verify host and port settings
+   - Check if MySQL is running
+   - Verify host and port settings
 
 2. **Access Denied**
-    - Check username and password
-    - Ensure user has CREATE privileges
+   - Check username and password
+   - Ensure user has CREATE privileges
 
 3. **Database Not Found**
-    - Run the setup script first
-    - Check database name in .env
+   - Run the installation script first
+   - Check database name in .env
 
 4. **Table Already Exists**
-    - Database was already initialized
-    - This is normal for subsequent runs
+   - Database was already initialized
+   - This is normal for subsequent runs
 
 ### Logs
 
