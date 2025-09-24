@@ -39,10 +39,10 @@ const sendVerificationEmail = async (email, token) => {
 		const mailOptions = {
 			from: process.env.EMAIL_USER,
 			to: email,
-			subject: 'Verify Your Email - Chrome Pass',
+			subject: 'Verify Your Email - KeyStack',
 			html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #333;">Welcome to Chrome Pass!</h2>
+          <h2 style="color: #333;">Welcome to KeyStack!</h2>
           <p>Thank you for registering. Please click the button below to verify your email address:</p>
           <div style="text-align: center; margin: 30px 0;">
             <a href="${verificationUrl}" 
@@ -55,7 +55,7 @@ const sendVerificationEmail = async (email, token) => {
           <p>This link will expire in 24 hours.</p>
           <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
           <p style="color: #666; font-size: 12px;">
-            If you didn't create an account with Chrome Pass, please ignore this email.
+            If you didn't create an account with KeyStack, please ignore this email.
           </p>
         </div>
       `

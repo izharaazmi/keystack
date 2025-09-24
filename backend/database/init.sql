@@ -1,9 +1,9 @@
--- Chrome Pass Database Initialization Script
+-- KeyStack Database Initialization Script
 -- MySQL 8.0+ Compatible
 
 -- Create database (run this first if database doesn't exist)
--- CREATE DATABASE chrome_pass CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
--- USE chrome_pass;
+-- CREATE DATABASE keystack CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+-- USE keystack;
 
 -- Drop tables if they exist (for clean initialization)
 -- Drop in reverse order to handle foreign key constraints
@@ -147,7 +147,7 @@ CREATE TABLE `cp_credential_groups`
 
 -- Insert default admin user
 INSERT INTO `cp_users` (`email`, `password`, `first_name`, `last_name`, `is_email_verified`, `role`, `is_active`)
-VALUES ('admin@chromepass.com',
+VALUES ('admin@keystack.com',
         '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj4J/8Qz8K2O', -- 'admin123' hashed
         'Admin',
         'User',

@@ -1,7 +1,7 @@
 {
-	"name": "team-credential-hub",
+	"name": "keystack",
 	"version": "1.0.0",
-	"description": "Team Credential Hub - Secure password sharing tool with backend API, admin frontend, and Chrome extension",
+	"description": "KeyStack - Where Security Meets Simplicity. Secure password sharing tool with backend API, admin frontend, and Chrome extension",
 	"main": "index.js",
 	"scripts": {
 		"dev": "concurrently \"npm run backend:dev\" \"npm run admin:dev\"",

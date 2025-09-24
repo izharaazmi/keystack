@@ -1,8 +1,8 @@
-# 🔐 Team Credential Hub
+# 🔐 KeyStack
 
-> **A secure password sharing and autofill system for teams**
+> **Where Security Meets Simplicity**
 
-Team Credential Hub (formerly Chrome Pass) is a comprehensive solution for secure password sharing within teams, featuring a robust backend API, intuitive admin dashboard, and seamless Chrome extension integration.
+KeyStack is a comprehensive solution for secure password sharing within teams, featuring a robust backend API, intuitive admin dashboard, and seamless Chrome extension integration.
 
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
 [![React](https://img.shields.io/badge/React-18.2-blue.svg)](https://reactjs.org/)
@@ -13,8 +13,8 @@ Team Credential Hub (formerly Chrome Pass) is a comprehensive solution for secur
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/izharaazmi/team-credential-hub.git
-cd team-credential-hub
+git clone https://github.com/izharaazmi/keystack.git
+cd keystack
 
 # 2. Install all dependencies
 npm run install:all
@@ -112,7 +112,7 @@ graph TB
 
 | Role | Email | Password |
 |------|-------|----------|
-| **Admin** | `admin@chromepass.com` | `admin123` |
+| **Admin** | `admin@keystack.com` | `admin123` |
 | **User** | `john.doe@company.com` | `password123` |
 | **User** | `jane.smith@company.com` | `password123` |
 
@@ -177,7 +177,7 @@ npm run build
 ### 1. Database Setup
 ```bash
 # Create production MySQL database
-CREATE DATABASE chrome_pass_prod CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE keystack_prod CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
 ### 2. Environment Configuration
@@ -245,10 +245,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📊 Project Stats
 
-![GitHub stars](https://img.shields.io/github/stars/izharaazmi/team-credential-hub?style=social)
-![GitHub forks](https://img.shields.io/github/forks/izharaazmi/team-credential-hub?style=social)
-![GitHub issues](https://img.shields.io/github/issues/izharaazmi/team-credential-hub)
-![GitHub pull requests](https://img.shields.io/github/issues-pr/izharaazmi/team-credential-hub)
+![GitHub stars](https://img.shields.io/github/stars/izharaazmi/keystack?style=social)
+![GitHub forks](https://img.shields.io/github/forks/izharaazmi/keystack?style=social)
+![GitHub issues](https://img.shields.io/github/issues/izharaazmi/keystack)
+![GitHub pull requests](https://img.shields.io/github/issues-pr/izharaazmi/keystack)
 
 ---
 
@@ -256,6 +256,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Made with ❤️ for secure team collaboration**
 
-[⭐ Star this repo](https://github.com/izharaazmi/team-credential-hub) | [🐛 Report Bug](https://github.com/izharaazmi/team-credential-hub/issues) | [💡 Request Feature](https://github.com/izharaazmi/team-credential-hub/issues)
+[⭐ Star this repo](https://github.com/izharaazmi/keystack) | [🐛 Report Bug](https://github.com/izharaazmi/keystack/issues) | [💡 Request Feature](https://github.com/izharaazmi/keystack/issues)
 
 </div>
