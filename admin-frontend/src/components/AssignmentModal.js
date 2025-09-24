@@ -2,6 +2,7 @@ import {Check, Search, UserMinus, UserPlus, Users, X} from 'lucide-react';
 import React, {useEffect, useState} from 'react';
 import toast from 'react-hot-toast';
 import {useMutation, useQuery, useQueryClient} from 'react-query';
+import ConfirmationModal from './ConfirmationModal';
 import {api} from '../utils/api';
 
 const AssignmentModal = ({
@@ -18,6 +19,7 @@ const AssignmentModal = ({
 	const [selectedTab, setSelectedTab] = useState('users'); // 'users' or 'teams'
 	const [selectedUsers, setSelectedUsers] = useState([]);
 	const [selectedTeams, setSelectedTeams] = useState([]);
+	const [removeConfirm, setRemoveConfirm] = useState({isOpen: false, type: null, item: null});
 	const queryClient = useQueryClient();
 
 	// Reset state when modal opens
@@ -179,15 +181,22 @@ const AssignmentModal = ({
 	};
 
 	const handleRemoveUser = (userId) => {
-		if (window.confirm('Are you sure you want to remove this user?')) {
-			removeUserMutation.mutate(userId);
-		}
+		const user = assignedUsers.find(u => u.id === userId);
+		setRemoveConfirm({isOpen: true, type: 'user', item: user});
 	};
 
 	const handleRemoveTeam = (teamId) => {
-		if (window.confirm('Are you sure you want to remove this team?')) {
-			removeTeamMutation.mutate(teamId);
+		const team = assignedTeams.find(t => t.id === teamId);
+		setRemoveConfirm({isOpen: true, type: 'team', item: team});
+	};
+
+	const confirmRemove = () => {
+		if (removeConfirm.type === 'user' && removeConfirm.item) {
+			removeUserMutation.mutate(removeConfirm.item.id);
+		} else if (removeConfirm.type === 'team' && removeConfirm.item) {
+			removeTeamMutation.mutate(removeConfirm.item.id);
 		}
+		setRemoveConfirm({isOpen: false, type: null, item: null});
 	};
 
 	if (!isOpen) return null;
@@ -403,6 +412,21 @@ const AssignmentModal = ({
 					</div>
 				</div>
 			</div>
+
+			{/* Remove Confirmation Modal */}
+			<ConfirmationModal
+				isOpen={removeConfirm.isOpen}
+				onClose={() => setRemoveConfirm({isOpen: false, type: null, item: null})}
+				onConfirm={confirmRemove}
+				title={removeConfirm.type === 'user' ? 'Remove User' : 'Remove Team'}
+				message={removeConfirm.type === 'user' 
+					? `Are you sure you want to remove "${removeConfirm.item?.first_name} ${removeConfirm.item?.last_name}" from this ${type}?`
+					: `Are you sure you want to remove "${removeConfirm.item?.name}" from this ${type}?`
+				}
+				confirmText={removeConfirm.type === 'user' ? 'Remove User' : 'Remove Team'}
+				type={removeConfirm.type === 'user' ? 'remove-user' : 'remove-team'}
+				isLoading={removeConfirm.type === 'user' ? removeUserMutation.isLoading : removeTeamMutation.isLoading}
+			/>
 		</div>
 	);
 };

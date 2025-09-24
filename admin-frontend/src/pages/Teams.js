@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import {useMutation, useQuery, useQueryClient} from 'react-query';
 import {useNavigate} from 'react-router-dom';
 import {api} from '../utils/api';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 const Teams = () => {
 	const navigate = useNavigate();
@@ -17,6 +18,7 @@ const Teams = () => {
 	const [editingTeam, setEditingTeam] = useState(null);
 	const [sortField, setSortField] = useState('name');
 	const [sortDirection, setSortDirection] = useState('asc');
+	const [deleteConfirm, setDeleteConfirm] = useState({isOpen: false, team: null});
 	const queryClient = useQueryClient();
 
 	const {register, handleSubmit, reset, formState: {errors}} = useForm();
@@ -196,8 +198,13 @@ const Teams = () => {
 			return;
 		}
 
-		if (window.confirm('Are you sure you want to delete this team?')) {
-			deleteMutation.mutate(id);
+		setDeleteConfirm({isOpen: true, team});
+	};
+
+	const confirmDelete = () => {
+		if (deleteConfirm.team) {
+			deleteMutation.mutate(deleteConfirm.team.id);
+			setDeleteConfirm({isOpen: false, team: null});
 		}
 	};
 
@@ -523,6 +530,18 @@ const Teams = () => {
 					</div>
 				</div>
 			)}
+
+			{/* Delete Confirmation Modal */}
+			<ConfirmationModal
+				isOpen={deleteConfirm.isOpen}
+				onClose={() => setDeleteConfirm({isOpen: false, team: null})}
+				onConfirm={confirmDelete}
+				title="Delete Team"
+				message={`Are you sure you want to delete "${deleteConfirm.team?.name}"? This action cannot be undone.`}
+				confirmText="Delete Team"
+				type="delete-team"
+				isLoading={deleteMutation.isLoading}
+			/>
 		</div>
 	);
 };

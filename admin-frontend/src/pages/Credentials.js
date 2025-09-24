@@ -4,6 +4,7 @@ import {useForm} from 'react-hook-form';
 import toast from 'react-hot-toast';
 import {useMutation, useQuery, useQueryClient} from 'react-query';
 import AssignmentModal from '../components/AssignmentModal';
+import ConfirmationModal from '../components/ConfirmationModal';
 import {api} from '../utils/api';
 
 const Credentials = () => {
@@ -13,6 +14,7 @@ const Credentials = () => {
 	const [showModal, setShowModal] = useState(false);
 	const [editingCredential, setEditingCredential] = useState(null);
 	const [showAssignmentModal, setShowAssignmentModal] = useState(false);
+	const [deleteConfirm, setDeleteConfirm] = useState({isOpen: false, credential: null});
 	const [selectedCredential, setSelectedCredential] = useState(null);
 	const [assignedUsers, setAssignedUsers] = useState([]);
 	const [assignedTeams, setAssignedTeams] = useState([]);
@@ -232,8 +234,14 @@ const Credentials = () => {
 	};
 
 	const handleDelete = (id) => {
-		if (window.confirm('Are you sure you want to delete this credential?')) {
-			deleteMutation.mutate(id);
+		const credential = credentials?.find(c => c.id === id);
+		setDeleteConfirm({isOpen: true, credential});
+	};
+
+	const confirmDelete = () => {
+		if (deleteConfirm.credential) {
+			deleteMutation.mutate(deleteConfirm.credential.id);
+			setDeleteConfirm({isOpen: false, credential: null});
 		}
 	};
 
@@ -587,6 +595,18 @@ const Credentials = () => {
 				assignedUsers={assignedUsers}
 				assignedTeams={assignedTeams}
 				initialTab={initialTab}
+			/>
+
+			{/* Delete Credential Confirmation Modal */}
+			<ConfirmationModal
+				isOpen={deleteConfirm.isOpen}
+				onClose={() => setDeleteConfirm({isOpen: false, credential: null})}
+				onConfirm={confirmDelete}
+				title="Delete Credential"
+				message={`Are you sure you want to delete "${deleteConfirm.credential?.label}"? This action cannot be undone.`}
+				confirmText="Delete Credential"
+				type="delete-credential"
+				isLoading={deleteMutation.isLoading}
 			/>
 		</div>
 	);

@@ -3,6 +3,7 @@ import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import toast from 'react-hot-toast';
 import {useMutation, useQuery, useQueryClient} from 'react-query';
 import {useNavigate, useSearchParams} from 'react-router-dom';
+import ConfirmationModal from '../components/ConfirmationModal';
 import CreateUserModal from '../components/CreateUserModal';
 import EditUserModal from '../components/EditUserModal';
 import Pagination from '../components/Pagination';
@@ -44,6 +45,7 @@ const Users = () => {
 	const [showUserModal, setShowUserModal] = useState(false);
 	const [showEditModal, setShowEditModal] = useState(false);
 	const [editingUser, setEditingUser] = useState(null);
+	const [deleteConfirm, setDeleteConfirm] = useState({isOpen: false, user: null});
 	const queryClient = useQueryClient();
 
 	// Initialize filters from URL parameters
@@ -232,14 +234,11 @@ const Users = () => {
 											<button
 												onClick={() => onViewAssignments(user)}
 												className="p-1 text-gray-400 hover:text-green-600 transition-colors relative group"
-												title="View assignments"
 											>
 												<FolderOpen className="h-4 w-4"/>
-												<div
-													className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-													View assignments
-													<div
-														className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+												<div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+													View credentials
+													<div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
 												</div>
 											</button>
 											{user.id !== currentUser?.id && (
@@ -653,7 +652,7 @@ const Users = () => {
 	}, []);
 
 	const handleViewAssignments = useCallback((user) => {
-		navigate(`/profile?userId=${user.id}&tab=assignments`);
+		navigate(`/profile?userId=${user.id}&tab=credentials`);
 	}, [navigate]);
 
 	const handleViewProfile = useCallback((user) => {
@@ -750,8 +749,15 @@ const Users = () => {
 	}, [approveUserMutation]);
 
 	const handleDeleteUser = useCallback((user) => {
-		updateUserStateMutation.mutate({id: user.id, state: STATES.TRASHED});
-	}, [updateUserStateMutation]);
+		setDeleteConfirm({isOpen: true, user});
+	}, []);
+
+	const confirmDeleteUser = useCallback(() => {
+		if (deleteConfirm.user) {
+			updateUserStateMutation.mutate({id: deleteConfirm.user.id, state: STATES.TRASHED});
+			setDeleteConfirm({isOpen: false, user: null});
+		}
+	}, [deleteConfirm.user, updateUserStateMutation]);
 
 	const handleRestoreUser = useCallback((user) => {
 		updateUserStateMutation.mutate({id: user.id, state: STATES.ACTIVE});
@@ -932,6 +938,18 @@ const Users = () => {
 				user={editingUser}
 				onUpdate={handleUpdateUser}
 				isLoading={updateUserMutation.isLoading}
+			/>
+
+			{/* Delete User Confirmation Modal */}
+			<ConfirmationModal
+				isOpen={deleteConfirm.isOpen}
+				onClose={() => setDeleteConfirm({isOpen: false, user: null})}
+				onConfirm={confirmDeleteUser}
+				title="Delete User"
+				message={`Are you sure you want to delete "${deleteConfirm.user?.first_name} ${deleteConfirm.user?.last_name}"? This action cannot be undone.`}
+				confirmText="Delete User"
+				type="remove-user"
+				isLoading={updateUserStateMutation.isLoading}
 			/>
 		</div>
 	);

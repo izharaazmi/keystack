@@ -3,6 +3,7 @@ import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import toast from 'react-hot-toast';
 import {useMutation, useQuery, useQueryClient} from 'react-query';
 import AssignmentModal from '../components/AssignmentModal';
+import ConfirmationModal from '../components/ConfirmationModal';
 import CreateProjectModal from '../components/CreateProjectModal';
 import EditProjectModal from '../components/EditProjectModal';
 import {api} from '../utils/api';
@@ -23,6 +24,7 @@ const Projects = () => {
 	const [showModal, setShowModal] = useState(false);
 	const [editingProject, setEditingProject] = useState(null);
 	const [showCreateModal, setShowCreateModal] = useState(false);
+	const [deleteConfirm, setDeleteConfirm] = useState({isOpen: false, project: null});
 	const queryClient = useQueryClient();
 
 	// Debounce search term to prevent excessive filtering
@@ -121,8 +123,14 @@ const Projects = () => {
 	};
 
 	const handleDelete = (id) => {
-		if (window.confirm('Are you sure you want to delete this project?')) {
-			deleteMutation.mutate(id);
+		const project = projects?.find(p => p.id === id);
+		setDeleteConfirm({isOpen: true, project});
+	};
+
+	const confirmDelete = () => {
+		if (deleteConfirm.project) {
+			deleteMutation.mutate(deleteConfirm.project.id);
+			setDeleteConfirm({isOpen: false, project: null});
 		}
 	};
 
@@ -505,6 +513,18 @@ const Projects = () => {
 				assignedUsers={assignedUsers}
 				assignedTeams={assignedTeams}
 				initialTab={initialTab}
+			/>
+
+			{/* Delete Confirmation Modal */}
+			<ConfirmationModal
+				isOpen={deleteConfirm.isOpen}
+				onClose={() => setDeleteConfirm({isOpen: false, project: null})}
+				onConfirm={confirmDelete}
+				title="Delete Project"
+				message={`Are you sure you want to delete "${deleteConfirm.project?.name}"? This action cannot be undone.`}
+				confirmText="Delete Project"
+				type="delete-project"
+				isLoading={deleteMutation.isLoading}
 			/>
 		</div>
 	);
