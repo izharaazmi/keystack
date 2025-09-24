@@ -112,9 +112,31 @@ const Layout = () => {
 				<div className="flex-1 flex flex-col min-h-0 border-r border-gray-200 bg-white">
 					<div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
 						<div className="flex items-center justify-between flex-shrink-0 px-4">
-							{!sidebarCollapsed && (
-								<h1 className="text-xl font-bold text-gray-900">Chrome Pass Admin</h1>
-							)}
+							<div className="flex items-center">
+								{!sidebarCollapsed ? (
+									<div className="flex items-center space-x-3">
+										<img 
+											src="/images/codeacious.png" 
+											alt="Codeacious Technologies" 
+											className="w-8 h-8 object-contain"
+										/>
+										<div className="flex flex-col">
+											<h1 className="text-xl font-bold text-gray-900">Chrome Pass Admin</h1>
+											<p className="text-xs text-gray-500">by Codeacious Technologies</p>
+										</div>
+									</div>
+								) : (
+									<div className="flex flex-col items-center">
+										<div className="w-8 h-8 flex items-center justify-center mb-1">
+											<img 
+												src="/images/codeacious.png" 
+												alt="Codeacious Technologies" 
+												className="w-8 h-8 object-contain"
+											/>
+										</div>
+									</div>
+								)}
+							</div>
 							<button
 								onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
 								className="p-1.5 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
