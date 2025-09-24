@@ -21,7 +21,6 @@ if (isEmailConfigured()) {
 			},
 		});
 	} catch (error) {
-		console.warn('Failed to create email transporter:', error.message);
 		transporter = null;
 	}
 }
@@ -29,7 +28,6 @@ if (isEmailConfigured()) {
 const sendVerificationEmail = async (email, token) => {
 	// Skip email sending if not configured
 	if (!isEmailConfigured() || !transporter) {
-		console.log('Email not configured, skipping verification email for:', email);
 		return;
 	}
 
@@ -62,10 +60,8 @@ const sendVerificationEmail = async (email, token) => {
 		};
 
 		await transporter.sendMail(mailOptions);
-		console.log('Verification email sent successfully to:', email);
 	} catch (error) {
 		// Log error but don't throw - fail silently
-		console.warn('Failed to send verification email to', email, ':', error.message);
 	}
 };
 

@@ -20,7 +20,7 @@ const DB_CONFIG = {
 	port: process.env.DB_PORT || 3306,
 	user: process.env.DB_USER || 'root',
 	password: process.env.DB_PASSWORD || '',
-	database: process.env.DB_NAME || 'chrome_pass'
+	database: process.env.DB_NAME || 'keystack'
 };
 
 // Debug: Show which credentials are being used

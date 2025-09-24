@@ -58,7 +58,6 @@ router.get('/', adminAuth, async (req, res) => {
 		// If team_id is provided, filter users by team membership
 		if (team_id) {
 			const teamId = parseInt(team_id, 10);
-			console.log('Team filter in backend:', {team_id, teamId, isValid: !isNaN(teamId)});
 			if (!isNaN(teamId)) {
 				includeClause.push({
 					model: Group,
@@ -68,7 +67,6 @@ router.get('/', adminAuth, async (req, res) => {
 					required: true,
 					attributes: ['id', 'name']
 				});
-				console.log('Added team filter to includeClause:', includeClause);
 			}
 		} else {
 			// If no team filter, include Groups for team count
@@ -159,7 +157,6 @@ router.get('/', adminAuth, async (req, res) => {
 			}
 		});
 	} catch (error) {
-		console.error('Get users error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -187,7 +184,6 @@ router.get('/:id', auth, async (req, res) => {
 
 		res.json({user});
 	} catch (error) {
-		console.error('Get user error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -258,7 +254,6 @@ router.put('/:id', auth, async (req, res) => {
 
 		res.json({user: updatedUser});
 	} catch (error) {
-		console.error('Update user error:', error);
 		if (error.name === 'SequelizeUniqueConstraintError') {
 			res.status(400).json({message: 'Email already exists'});
 		} else {
@@ -297,7 +292,6 @@ router.patch('/:id/deactivate', adminAuth, async (req, res) => {
 
 		res.json({message: 'User deactivated successfully'});
 	} catch (error) {
-		console.error('Deactivate user error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -316,7 +310,6 @@ router.patch('/:id/activate', adminAuth, async (req, res) => {
 
 		res.json({message: 'User activated successfully'});
 	} catch (error) {
-		console.error('Activate user error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -346,7 +339,6 @@ router.get('/stats/overview', adminAuth, async (req, res) => {
 			recentUsers
 		});
 	} catch (error) {
-		console.error('Get user stats error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -380,7 +372,6 @@ router.patch('/:id/role', adminAuth, async (req, res) => {
 
 		res.json({message: 'User role updated successfully'});
 	} catch (error) {
-		console.error('Update user role error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -398,7 +389,6 @@ router.get('/pending', adminAuth, async (req, res) => {
 
 		res.json({users: pendingUsers});
 	} catch (error) {
-		console.error('Get pending users error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -421,7 +411,6 @@ router.patch('/:id/approve', adminAuth, async (req, res) => {
 
 		res.json({message: 'User approved successfully'});
 	} catch (error) {
-		console.error('Approve user error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -481,7 +470,6 @@ router.patch('/:id/state', adminAuth, async (req, res) => {
 
 		res.json({message});
 	} catch (error) {
-		console.error('Update user state error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });

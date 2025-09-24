@@ -52,7 +52,6 @@ const Users = () => {
 		const roleParam = searchParams.get('role');
 		const statusParam = searchParams.get('status');
 
-		console.log('URL parameters:', {teamParam, roleParam, statusParam});
 
 		if (teamParam) {
 			setTeamFilter(teamParam);
@@ -122,7 +121,6 @@ const Users = () => {
 			if (roleFilter) params.append('role', roleFilter);
 			if (statusFilter) params.append('state', statusFilter);
 			if (teamFilter && teamFilter !== '') {
-				console.log('Team filter processing:', {teamFilter});
 				params.append('team_id', teamFilter);
 			}
 			params.append('sort_field', sortField);
@@ -130,8 +128,6 @@ const Users = () => {
 			params.append('page', currentPage.toString());
 			params.append('limit', pageSize.toString());
 
-			console.log('Users query params:', params.toString()); // Debug log
-			console.log('Filter values:', {roleFilter, statusFilter, teamFilter}); // Debug log
 			const response = await api.get(`/users?${params.toString()}`);
 			return response.data;
 		},
@@ -145,21 +141,9 @@ const Users = () => {
 	const users = useMemo(() => usersData?.users || [], [usersData?.users]);
 	const pagination = usersData?.pagination;
 
-	// Debug logging for filter values
-	console.log('Current filter values:', {
-		debouncedSearchTerm,
-		roleFilter,
-		statusFilter,
-		teamFilter,
-		sortField,
-		sortDirection,
-		currentPage,
-		pageSize
-	});
 
 	const {data: teams} = useQuery('teams', async () => {
 		const response = await api.get('/teams');
-		console.log('Teams loaded:', response.data.groups); // Debug log
 		return response.data.groups;
 	});
 
@@ -698,7 +682,6 @@ const Users = () => {
 
 	const handleRoleFilterChange = useCallback((e) => {
 		const value = e.target.value;
-		console.log('Role filter changed:', value); // Debug log
 		setRoleFilter(value);
 		setCurrentPage(1);
 
@@ -714,7 +697,6 @@ const Users = () => {
 
 	const handleStatusFilterChange = useCallback((e) => {
 		const value = e.target.value;
-		console.log('Status filter changed:', value); // Debug log
 		setStatusFilter(value);
 		setCurrentPage(1);
 
@@ -730,7 +712,6 @@ const Users = () => {
 
 	const handleTeamFilterChange = useCallback((e) => {
 		const value = e.target.value;
-		console.log('Team filter changed:', value, 'Type:', typeof value); // Debug log
 		setTeamFilter(value);
 		setCurrentPage(1);
 

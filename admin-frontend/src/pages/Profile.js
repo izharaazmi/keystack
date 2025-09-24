@@ -125,7 +125,6 @@ const Profile = ({ userId = null }) => {
 		try {
 			await updateProfileMutation.mutateAsync(formData);
 		} catch (error) {
-			console.error('Profile update error:', error);
 		} finally {
 			setIsLoading(false);
 		}
@@ -137,7 +136,6 @@ const Profile = ({ userId = null }) => {
 		try {
 			await updateUserMutation.mutateAsync({userId, userData: formData});
 		} catch (error) {
-			console.error('User update error:', error);
 		} finally {
 			setIsLoading(false);
 		}

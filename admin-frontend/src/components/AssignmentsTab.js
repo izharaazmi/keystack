@@ -17,9 +17,7 @@ const AssignmentsTab = ({ userId = null }) => {
 		['userAssignments', userId],
 		async () => {
 			const endpoint = userId ? `/auth/users/${userId}/assignments` : '/auth/me/assignments';
-			console.log('Fetching assignments from:', endpoint);
 			const response = await api.get(endpoint);
-			console.log('Assignments response:', response.data);
 			return response.data;
 		},
 		{
@@ -142,9 +140,6 @@ const AssignmentsTab = ({ userId = null }) => {
 	}
 
 	if (error) {
-		console.error('AssignmentsTab error:', error);
-		console.error('Error response:', error.response);
-		console.error('Error message:', error.message);
 		return (
 			<div className="text-center py-8">
 				<p className="text-red-600">Failed to load assignments. Please try again.</p>

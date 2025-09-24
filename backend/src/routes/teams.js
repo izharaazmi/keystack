@@ -38,7 +38,6 @@ router.get('/', auth, async (req, res) => {
 
 		res.json({groups});
 	} catch (error) {
-		console.error('Get groups error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -81,7 +80,6 @@ router.post('/', auth, async (req, res) => {
 
 		res.status(201).json({group});
 	} catch (error) {
-		console.error('Create group error:', error);
 		if (error.name === 'SequelizeUniqueConstraintError') {
 			res.status(400).json({message: 'Group name already exists'});
 		} else {
@@ -163,7 +161,6 @@ router.put('/:id', auth, async (req, res) => {
 
 		res.json({group: updatedGroup});
 	} catch (error) {
-		console.error('Update group error:', error);
 		if (error.name === 'SequelizeUniqueConstraintError') {
 			res.status(400).json({message: 'Group name already exists'});
 		} else {
@@ -191,7 +188,6 @@ router.delete('/:id', auth, async (req, res) => {
 
 		res.json({message: 'Group deleted successfully'});
 	} catch (error) {
-		console.error('Delete group error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -247,7 +243,6 @@ router.post('/:id/members', auth, async (req, res) => {
 
 		res.json({group: groupWithAssociations});
 	} catch (error) {
-		console.error('Add member error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -285,7 +280,6 @@ router.delete('/:id/members/:userId', auth, async (req, res) => {
 
 		res.json({group: groupWithAssociations});
 	} catch (error) {
-		console.error('Remove member error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -358,7 +352,6 @@ router.post('/:id/batch-add-members', auth, async (req, res) => {
 			skipped: existingUserIds.length
 		});
 	} catch (error) {
-		console.error('Batch add members error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -408,7 +401,6 @@ router.post('/:id/remove-members', auth, async (req, res) => {
 			removed: removedCount
 		});
 	} catch (error) {
-		console.error('Batch remove members error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });

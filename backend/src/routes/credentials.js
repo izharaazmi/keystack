@@ -106,7 +106,6 @@ router.get('/', auth, async (req, res) => {
 
 		res.json({credentials: credentialsWithCounts});
 	} catch (error) {
-		console.error('Get credentials error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -176,7 +175,6 @@ router.get('/for-url', auth, async (req, res) => {
 
 		res.json({credentials: matchingCredentials});
 	} catch (error) {
-		console.error('Get credentials for URL error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -234,7 +232,6 @@ router.post('/', auth, async (req, res) => {
 
 		res.status(201).json({credential: credentialWithAssociations});
 	} catch (error) {
-		console.error('Create credential error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -297,7 +294,6 @@ router.put('/:id', auth, async (req, res) => {
 
 		res.json({credential: updatedCredential});
 	} catch (error) {
-		console.error('Update credential error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -321,7 +317,6 @@ router.delete('/:id', auth, async (req, res) => {
 
 		res.json({message: 'Credential deleted successfully'});
 	} catch (error) {
-		console.error('Delete credential error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -377,7 +372,6 @@ router.post('/:id/use', auth, async (req, res) => {
 
 		res.json({message: 'Usage recorded'});
 	} catch (error) {
-		console.error('Record usage error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -395,7 +389,6 @@ router.get('/projects/list', auth, async (req, res) => {
 		const projectList = projects.map(p => p.name);
 		res.json({projects: projectList});
 	} catch (error) {
-		console.error('Get projects error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -433,7 +426,6 @@ router.get('/projects', auth, async (req, res) => {
 
 		res.json({projects: projectList});
 	} catch (error) {
-		console.error('Get projects with count error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -509,7 +501,6 @@ router.get('/:id/users', auth, async (req, res) => {
 
 		res.json({users: allUsers});
 	} catch (error) {
-		console.error('Get credential users error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -539,7 +530,6 @@ router.get('/:id/teams', auth, async (req, res) => {
 		const teams = credentialGroups.map(cg => cg.Group);
 		res.json({teams});
 	} catch (error) {
-		console.error('Get credential teams error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -586,7 +576,6 @@ router.post('/:id/users', auth, async (req, res) => {
 
 		res.json({message: 'User assigned successfully'});
 	} catch (error) {
-		console.error('Assign user error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -633,7 +622,6 @@ router.post('/:id/teams', auth, async (req, res) => {
 
 		res.json({message: 'Team assigned successfully'});
 	} catch (error) {
-		console.error('Assign team error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -664,7 +652,6 @@ router.delete('/:id/users/:userId', auth, async (req, res) => {
 		await assignment.destroy();
 		res.json({message: 'User removed successfully'});
 	} catch (error) {
-		console.error('Remove user error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -695,7 +682,6 @@ router.delete('/:id/teams/:teamId', auth, async (req, res) => {
 		await assignment.destroy();
 		res.json({message: 'Team removed successfully'});
 	} catch (error) {
-		console.error('Remove team error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });

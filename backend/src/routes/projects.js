@@ -50,7 +50,6 @@ router.get('/', auth, async (req, res) => {
 
 		res.json({projects});
 	} catch (error) {
-		console.error('Get projects error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -94,7 +93,6 @@ router.post('/', auth, async (req, res) => {
 
 		res.status(201).json({project});
 	} catch (error) {
-		console.error('Create project error:', error);
 		if (error.name === 'SequelizeUniqueConstraintError') {
 			res.status(400).json({message: 'Project name already exists'});
 		} else {
@@ -161,7 +159,6 @@ router.put('/:id', auth, async (req, res) => {
 
 		res.json({project});
 	} catch (error) {
-		console.error('Update project error:', error);
 		if (error.name === 'SequelizeUniqueConstraintError') {
 			res.status(400).json({message: 'Project name already exists'});
 		} else {
@@ -189,7 +186,6 @@ router.delete('/:id', auth, async (req, res) => {
 
 		res.json({message: 'Project deleted successfully'});
 	} catch (error) {
-		console.error('Delete project error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -265,7 +261,6 @@ router.get('/:id/users', auth, async (req, res) => {
 
 		res.json({users: allUsers});
 	} catch (error) {
-		console.error('Get project users error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -295,7 +290,6 @@ router.get('/:id/teams', auth, async (req, res) => {
 		const teams = projectGroups.map(pg => pg.Group);
 		res.json({teams});
 	} catch (error) {
-		console.error('Get project teams error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -342,7 +336,6 @@ router.post('/:id/users', auth, async (req, res) => {
 
 		res.json({message: 'User assigned successfully'});
 	} catch (error) {
-		console.error('Assign user error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -389,7 +382,6 @@ router.post('/:id/teams', auth, async (req, res) => {
 
 		res.json({message: 'Team assigned successfully'});
 	} catch (error) {
-		console.error('Assign team error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -420,7 +412,6 @@ router.delete('/:id/users/:userId', auth, async (req, res) => {
 		await assignment.destroy();
 		res.json({message: 'User removed successfully'});
 	} catch (error) {
-		console.error('Remove user error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -451,7 +442,6 @@ router.delete('/:id/teams/:teamId', auth, async (req, res) => {
 		await assignment.destroy();
 		res.json({message: 'Team removed successfully'});
 	} catch (error) {
-		console.error('Remove team error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });

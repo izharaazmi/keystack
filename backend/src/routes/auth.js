@@ -94,7 +94,6 @@ router.post('/register', async (req, res) => {
 			emailConfigured
 		});
 	} catch (error) {
-		console.error('Registration error:', error);
 		res.status(500).json({message: 'Server error during registration'});
 	}
 });
@@ -159,7 +158,6 @@ router.post('/login', async (req, res) => {
 			}
 		});
 	} catch (error) {
-		console.error('Login error:', error);
 		res.status(500).json({message: 'Server error during login'});
 	}
 });
@@ -220,7 +218,6 @@ router.post('/extension-login', async (req, res) => {
 			}
 		});
 	} catch (error) {
-		console.error('Extension login error:', error);
 		res.status(500).json({message: 'Server error during login'});
 	}
 });
@@ -241,7 +238,6 @@ router.get('/verify-email/:token', async (req, res) => {
 
 		res.json({message: 'Email verified successfully'});
 	} catch (error) {
-		console.error('Email verification error:', error);
 		res.status(500).json({message: 'Server error during email verification'});
 	}
 });
@@ -271,7 +267,6 @@ router.post('/resend-verification', async (req, res) => {
 
 		res.json({message: 'Verification email sent successfully'});
 	} catch (error) {
-		console.error('Resend verification error:', error);
 		res.status(500).json({message: 'Server error during resend verification'});
 	}
 });
@@ -292,7 +287,6 @@ router.get('/me', auth, async (req, res) => {
 			}
 		});
 	} catch (error) {
-		console.error('Get user error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -367,7 +361,6 @@ router.put('/me', auth, async (req, res) => {
 			}
 		});
 	} catch (error) {
-		console.error('Update profile error:', error);
 		if (error.name === 'SequelizeUniqueConstraintError') {
 			res.status(400).json({message: 'Email already exists'});
 		} else {
@@ -380,7 +373,6 @@ router.put('/me', auth, async (req, res) => {
 router.get('/me/assignments', auth, async (req, res) => {
 	try {
 		const userId = req.user.id;
-		console.log('Getting assignments for user:', userId);
 
 		// Get user's groups
 		let userGroups = [];
@@ -389,11 +381,8 @@ router.get('/me/assignments', auth, async (req, res) => {
 			userGroups = await UserGroup.findAll({
 				where: {userId},
 			});
-			console.log('User groups found:', userGroups.length);
 			groupIds = userGroups.map(ug => ug.groupId);
-			console.log('Group IDs:', groupIds);
 		} catch (groupError) {
-			console.error('Error fetching user groups:', groupError);
 			// Continue without groups
 		}
 
@@ -532,13 +521,7 @@ router.get('/me/assignments', auth, async (req, res) => {
 			credentials: [...directCredentials, ...groupCredentials]
 		});
 	} catch (error) {
-		console.error('Get user assignments error:', error);
-		console.error('Error details:', {
-			message: error.message,
-			stack: error.stack,
-			name: error.name
-		});
-		res.status(500).json({message: 'Server error'});
+		res.status(500).json({message: 'Server error: ' + error.message});
 	}
 });
 
@@ -562,7 +545,6 @@ router.delete('/me/projects/:projectId', auth, async (req, res) => {
 
 		res.json({message: 'Project access removed successfully'});
 	} catch (error) {
-		console.error('Remove project access error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -587,7 +569,6 @@ router.delete('/me/credentials/:credentialId', auth, async (req, res) => {
 
 		res.json({message: 'Credential access removed successfully'});
 	} catch (error) {
-		console.error('Remove credential access error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -595,18 +576,12 @@ router.delete('/me/credentials/:credentialId', auth, async (req, res) => {
 // Get any user's assigned projects and credentials (admin only)
 router.get('/users/:userId/assignments', auth, async (req, res) => {
 	try {
-		console.log('=== ASSIGNMENTS ENDPOINT DEBUG ===');
-		console.log('Request user:', req.user);
-		console.log('Requested userId:', req.params.userId);
-		
 		// Check if user is admin
 		if (req.user.role !== 1) { // 1 = admin role
-			console.log('Access denied - not admin. Role:', req.user.role);
 			return res.status(403).json({message: 'Admin access required'});
 		}
 
 		const {userId} = req.params;
-		console.log('Processing assignments for user ID:', userId);
 
 		// Verify the target user exists
 		const targetUser = await User.findByPk(userId);
@@ -761,7 +736,6 @@ router.get('/users/:userId/assignments', auth, async (req, res) => {
 			credentials: [...directCredentials, ...groupCredentials]
 		});
 	} catch (error) {
-		console.error('Get user assignments error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -790,7 +764,6 @@ router.delete('/users/:userId/projects/:projectId', auth, async (req, res) => {
 
 		res.json({message: 'Project access removed successfully'});
 	} catch (error) {
-		console.error('Remove project access error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
@@ -819,7 +792,6 @@ router.delete('/users/:userId/credentials/:credentialId', auth, async (req, res)
 
 		res.json({message: 'Credential access removed successfully'});
 	} catch (error) {
-		console.error('Remove credential access error:', error);
 		res.status(500).json({message: 'Server error'});
 	}
 });
