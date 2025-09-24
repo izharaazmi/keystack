@@ -1,4 +1,4 @@
-import {Calendar, Edit3, Mail, Shield, User, FolderOpen, Key, ArrowLeft} from 'lucide-react';
+import {Calendar, Edit3, Mail, Shield, User, FolderOpen, ArrowLeft} from 'lucide-react';
 import React, {useState, useEffect} from 'react';
 import toast from 'react-hot-toast';
 import {useMutation, useQuery, useQueryClient} from 'react-query';
@@ -6,11 +6,9 @@ import {useNavigate, useSearchParams} from 'react-router-dom';
 import ProfileEditModal from '../components/ProfileEditModal';
 import EditUserModal from '../components/EditUserModal';
 import AssignmentsTab from '../components/AssignmentsTab';
-import {useAuth} from '../contexts/AuthContext';
 import {api} from '../utils/api';
 
 const Profile = ({ userId = null }) => {
-	const {user: currentUser} = useAuth();
 	const navigate = useNavigate();
 	const [searchParams] = useSearchParams();
 	const [isEditModalOpen, setIsEditModalOpen] = useState(false);

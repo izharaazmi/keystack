@@ -1,5 +1,5 @@
 import {Folder, Key, LayoutDashboard, LogOut, Menu, User, UserCheck, Users, X, ChevronLeft, ChevronRight} from 'lucide-react';
-import React, {useState, useEffect, useRef} from 'react';
+import React, {useState, useEffect} from 'react';
 import {Link, Outlet, useLocation} from 'react-router-dom';
 import {useAuth} from '../contexts/AuthContext';
 
