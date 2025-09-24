@@ -7,25 +7,32 @@ const ProjectUser = sequelize.define('ProjectUser', {
 		primaryKey: true,
 		autoIncrement: true
 	},
-	project_id: {
+	projectId: {
 		type: DataTypes.INTEGER,
 		allowNull: false,
+		field: 'project_id',
 		references: {
 			model: 'cp_projects',
 			key: 'id'
 		}
 	},
-	user_id: {
+	userId: {
 		type: DataTypes.INTEGER,
 		allowNull: false,
+		field: 'user_id',
 		references: {
 			model: 'cp_users',
 			key: 'id'
 		}
+	},
+	created_at: {
+		type: DataTypes.DATE,
+		allowNull: false,
+		defaultValue: DataTypes.NOW
 	}
 }, {
 	tableName: 'cp_project_users',
-	timestamps: true,
+	timestamps: false,
 	indexes: [
 		{
 			unique: true,

@@ -7,25 +7,32 @@ const ProjectGroup = sequelize.define('ProjectGroup', {
 		primaryKey: true,
 		autoIncrement: true
 	},
-	project_id: {
+	projectId: {
 		type: DataTypes.INTEGER,
 		allowNull: false,
+		field: 'project_id',
 		references: {
 			model: 'cp_projects',
 			key: 'id'
 		}
 	},
-	group_id: {
+	groupId: {
 		type: DataTypes.INTEGER,
 		allowNull: false,
+		field: 'group_id',
 		references: {
 			model: 'cp_groups',
 			key: 'id'
 		}
+	},
+	created_at: {
+		type: DataTypes.DATE,
+		allowNull: false,
+		defaultValue: DataTypes.NOW
 	}
 }, {
 	tableName: 'cp_project_groups',
-	timestamps: true,
+	timestamps: false,
 	indexes: [
 		{
 			unique: true,

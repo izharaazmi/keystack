@@ -1,8 +1,9 @@
 import express from 'express';
 import Joi from 'joi';
 import jwt from 'jsonwebtoken';
+import {Op} from 'sequelize';
 import {auth} from '../middleware/auth.js';
-import {User} from '../models/index.js';
+import {User, Project, Credential, ProjectUser, CredentialUser, ProjectGroup, CredentialGroup, UserGroup, Group} from '../models/index.js';
 import {sendVerificationEmail} from '../utils/email.js';
 
 const router = express.Router();
@@ -286,7 +287,8 @@ router.get('/me', auth, async (req, res) => {
 				last_name: req.user.last_name,
 				role: req.user.role,
 				is_email_verified: req.user.is_email_verified,
-				created_at: req.user.created_at
+				created_at: req.user.created_at,
+				last_login: req.user.last_login
 			}
 		});
 	} catch (error) {
@@ -371,6 +373,454 @@ router.put('/me', auth, async (req, res) => {
 		} else {
 			res.status(500).json({message: 'Server error'});
 		}
+	}
+});
+
+// Get user's assigned projects and credentials
+router.get('/me/assignments', auth, async (req, res) => {
+	try {
+		const userId = req.user.id;
+		console.log('Getting assignments for user:', userId);
+
+		// Get user's groups
+		let userGroups = [];
+		let groupIds = [];
+		try {
+			userGroups = await UserGroup.findAll({
+				where: {userId},
+			});
+			console.log('User groups found:', userGroups.length);
+			groupIds = userGroups.map(ug => ug.groupId);
+			console.log('Group IDs:', groupIds);
+		} catch (groupError) {
+			console.error('Error fetching user groups:', groupError);
+			// Continue without groups
+		}
+
+		// Get projects assigned to user directly
+		const directProjectAssignments = await ProjectUser.findAll({
+			where: {userId: userId},
+			include: [
+				{
+					model: Project,
+					as: 'Project',
+					attributes: ['id', 'name', 'description', 'created_at'],
+					include: [
+						{
+							model: User,
+							as: 'createdBy',
+							attributes: ['first_name', 'last_name', 'email']
+						}
+					]
+				}
+			]
+		});
+
+		// Get projects assigned to user via groups
+		let groupProjectAssignments = [];
+		if (groupIds.length > 0) {
+			groupProjectAssignments = await ProjectGroup.findAll({
+				where: {groupId: {[Op.in]: groupIds}},
+				include: [
+					{
+						model: Project,
+						as: 'Project',
+						attributes: ['id', 'name', 'description', 'created_at'],
+						include: [
+							{
+								model: User,
+								as: 'createdBy',
+								attributes: ['first_name', 'last_name', 'email']
+							}
+							]
+					},
+					{
+						model: Group,
+						as: 'Group',
+						attributes: ['id', 'name']
+					}
+				]
+			});
+		}
+
+		// Get credentials assigned to user directly
+		const directCredentialAssignments = await CredentialUser.findAll({
+			where: {userId},
+			include: [
+				{
+					model: Credential,
+					as: 'Credential',
+					attributes: ['id', 'label', 'url', 'description', 'created_at', 'last_used', 'use_count'],
+					include: [
+						{
+							model: User,
+							as: 'createdBy',
+							attributes: ['first_name', 'last_name', 'email']
+						},
+						{
+							model: Project,
+							as: 'project',
+							attributes: ['id', 'name', 'description']
+						}
+					]
+				}
+			]
+		});
+
+		// Get credentials assigned to user via groups
+		let groupCredentialAssignments = [];
+		if (groupIds.length > 0) {
+			groupCredentialAssignments = await CredentialGroup.findAll({
+				where: {groupId: {[Op.in]: groupIds}},
+				include: [
+					{
+						model: Credential,
+						as: 'Credential',
+						attributes: ['id', 'label', 'url', 'description', 'created_at', 'last_used', 'use_count'],
+						include: [
+							{
+								model: User,
+								as: 'createdBy',
+								attributes: ['first_name', 'last_name', 'email']
+							},
+							{
+								model: Project,
+								as: 'project',
+								attributes: ['id', 'name', 'description']
+							}
+						]
+					},
+					{
+						model: Group,
+						as: 'Group',
+						attributes: ['id', 'name']
+					}
+				]
+			});
+		}
+
+		// Format projects data
+		const directProjects = directProjectAssignments.map(pa => ({
+			...pa.Project.dataValues,
+			assignmentType: 'direct',
+			assignedAt: pa.created_at
+		}));
+
+		const groupProjects = groupProjectAssignments.map(pa => ({
+			...pa.Project.dataValues,
+			assignmentType: 'group',
+			assignedVia: pa.Group.name,
+			assignedAt: pa.created_at
+		}));
+
+		// Format credentials data
+		const directCredentials = directCredentialAssignments.map(ca => ({
+			...ca.Credential.dataValues,
+			assignmentType: 'direct',
+			assignedAt: ca.created_at
+		}));
+
+		const groupCredentials = groupCredentialAssignments.map(ca => ({
+			...ca.Credential.dataValues,
+			assignmentType: 'group',
+			assignedVia: ca.Group.name,
+			assignedAt: ca.created_at
+		}));
+
+		res.json({
+			projects: [...directProjects, ...groupProjects],
+			credentials: [...directCredentials, ...groupCredentials]
+		});
+	} catch (error) {
+		console.error('Get user assignments error:', error);
+		console.error('Error details:', {
+			message: error.message,
+			stack: error.stack,
+			name: error.name
+		});
+		res.status(500).json({message: 'Server error'});
+	}
+});
+
+// Remove user access from project
+router.delete('/me/projects/:projectId', auth, async (req, res) => {
+	try {
+		const {projectId} = req.params;
+		const userId = req.user.id;
+
+		// Check if user has direct access to this project
+		const projectUser = await ProjectUser.findOne({
+			where: {projectId: projectId, userId: userId}
+		});
+
+		if (!projectUser) {
+			return res.status(404).json({message: 'Project access not found'});
+		}
+
+		// Remove the access
+		await projectUser.destroy();
+
+		res.json({message: 'Project access removed successfully'});
+	} catch (error) {
+		console.error('Remove project access error:', error);
+		res.status(500).json({message: 'Server error'});
+	}
+});
+
+// Remove user access from credential
+router.delete('/me/credentials/:credentialId', auth, async (req, res) => {
+	try {
+		const {credentialId} = req.params;
+		const userId = req.user.id;
+
+		// Check if user has direct access to this credential
+		const credentialUser = await CredentialUser.findOne({
+			where: {credentialId, userId}
+		});
+
+		if (!credentialUser) {
+			return res.status(404).json({message: 'Credential access not found'});
+		}
+
+		// Remove the access
+		await credentialUser.destroy();
+
+		res.json({message: 'Credential access removed successfully'});
+	} catch (error) {
+		console.error('Remove credential access error:', error);
+		res.status(500).json({message: 'Server error'});
+	}
+});
+
+// Get any user's assigned projects and credentials (admin only)
+router.get('/users/:userId/assignments', auth, async (req, res) => {
+	try {
+		console.log('=== ASSIGNMENTS ENDPOINT DEBUG ===');
+		console.log('Request user:', req.user);
+		console.log('Requested userId:', req.params.userId);
+		
+		// Check if user is admin
+		if (req.user.role !== 1) { // 1 = admin role
+			console.log('Access denied - not admin. Role:', req.user.role);
+			return res.status(403).json({message: 'Admin access required'});
+		}
+
+		const {userId} = req.params;
+		console.log('Processing assignments for user ID:', userId);
+
+		// Verify the target user exists
+		const targetUser = await User.findByPk(userId);
+		if (!targetUser) {
+			return res.status(404).json({message: 'User not found'});
+		}
+
+		// Get user's groups
+		const userGroups = await UserGroup.findAll({
+			where: {userId},
+		});
+		const groupIds = userGroups.map(ug => ug.groupId);
+
+		// Get projects assigned to user directly
+		const directProjectAssignments = await ProjectUser.findAll({
+			where: {userId: userId},
+			include: [
+				{
+					model: Project,
+					as: 'Project',
+					attributes: ['id', 'name', 'description', 'created_at'],
+					include: [
+						{
+							model: User,
+							as: 'createdBy',
+							attributes: ['first_name', 'last_name', 'email']
+						}
+					]
+				}
+			]
+		});
+
+		// Get projects assigned to user via groups
+		let groupProjectAssignments = [];
+		if (groupIds.length > 0) {
+			groupProjectAssignments = await ProjectGroup.findAll({
+				where: {groupId: {[Op.in]: groupIds}},
+				include: [
+					{
+						model: Project,
+						as: 'Project',
+						attributes: ['id', 'name', 'description', 'created_at'],
+						include: [
+							{
+								model: User,
+								as: 'createdBy',
+								attributes: ['first_name', 'last_name', 'email']
+							}
+							]
+					},
+					{
+						model: Group,
+						as: 'Group',
+						attributes: ['id', 'name']
+					}
+				]
+			});
+		}
+
+		// Get credentials assigned to user directly
+		const directCredentialAssignments = await CredentialUser.findAll({
+			where: {userId},
+			include: [
+				{
+					model: Credential,
+					as: 'Credential',
+					attributes: ['id', 'label', 'url', 'description', 'created_at', 'last_used', 'use_count'],
+					include: [
+						{
+							model: User,
+							as: 'createdBy',
+							attributes: ['first_name', 'last_name', 'email']
+						},
+						{
+							model: Project,
+							as: 'project',
+							attributes: ['id', 'name', 'description']
+						}
+					]
+				}
+			]
+		});
+
+		// Get credentials assigned to user via groups
+		let groupCredentialAssignments = [];
+		if (groupIds.length > 0) {
+			groupCredentialAssignments = await CredentialGroup.findAll({
+				where: {groupId: {[Op.in]: groupIds}},
+				include: [
+					{
+						model: Credential,
+						as: 'Credential',
+						attributes: ['id', 'label', 'url', 'description', 'created_at', 'last_used', 'use_count'],
+						include: [
+							{
+								model: User,
+								as: 'createdBy',
+								attributes: ['first_name', 'last_name', 'email']
+							},
+							{
+								model: Project,
+								as: 'project',
+								attributes: ['id', 'name', 'description']
+							}
+						]
+					},
+					{
+						model: Group,
+						as: 'Group',
+						attributes: ['id', 'name']
+					}
+				]
+			});
+		}
+
+		// Format projects data
+		const directProjects = directProjectAssignments.map(pa => ({
+			...pa.Project.dataValues,
+			assignmentType: 'direct',
+			assignedAt: pa.created_at
+		}));
+
+		const groupProjects = groupProjectAssignments.map(pa => ({
+			...pa.Project.dataValues,
+			assignmentType: 'group',
+			assignedVia: pa.Group.name,
+			assignedAt: pa.created_at
+		}));
+
+		// Format credentials data
+		const directCredentials = directCredentialAssignments.map(ca => ({
+			...ca.Credential.dataValues,
+			assignmentType: 'direct',
+			assignedAt: ca.created_at
+		}));
+
+		const groupCredentials = groupCredentialAssignments.map(ca => ({
+			...ca.Credential.dataValues,
+			assignmentType: 'group',
+			assignedVia: ca.Group.name,
+			assignedAt: ca.created_at
+		}));
+
+		res.json({
+			user: {
+				id: targetUser.id,
+				first_name: targetUser.first_name,
+				last_name: targetUser.last_name,
+				email: targetUser.email
+			},
+			projects: [...directProjects, ...groupProjects],
+			credentials: [...directCredentials, ...groupCredentials]
+		});
+	} catch (error) {
+		console.error('Get user assignments error:', error);
+		res.status(500).json({message: 'Server error'});
+	}
+});
+
+// Remove user access from project (admin only)
+router.delete('/users/:userId/projects/:projectId', auth, async (req, res) => {
+	try {
+		// Check if user is admin
+		if (req.user.role !== 1) { // 1 = admin role
+			return res.status(403).json({message: 'Admin access required'});
+		}
+
+		const {userId, projectId} = req.params;
+
+		// Check if user has direct access to this project
+		const projectUser = await ProjectUser.findOne({
+			where: {projectId: projectId, userId: userId}
+		});
+
+		if (!projectUser) {
+			return res.status(404).json({message: 'Project access not found'});
+		}
+
+		// Remove the access
+		await projectUser.destroy();
+
+		res.json({message: 'Project access removed successfully'});
+	} catch (error) {
+		console.error('Remove project access error:', error);
+		res.status(500).json({message: 'Server error'});
+	}
+});
+
+// Remove user access from credential (admin only)
+router.delete('/users/:userId/credentials/:credentialId', auth, async (req, res) => {
+	try {
+		// Check if user is admin
+		if (req.user.role !== 1) { // 1 = admin role
+			return res.status(403).json({message: 'Admin access required'});
+		}
+
+		const {userId, credentialId} = req.params;
+
+		// Check if user has direct access to this credential
+		const credentialUser = await CredentialUser.findOne({
+			where: {credentialId, userId}
+		});
+
+		if (!credentialUser) {
+			return res.status(404).json({message: 'Credential access not found'});
+		}
+
+		// Remove the access
+		await credentialUser.destroy();
+
+		res.json({message: 'Credential access removed successfully'});
+	} catch (error) {
+		console.error('Remove credential access error:', error);
+		res.status(500).json({message: 'Server error'});
 	}
 });
 

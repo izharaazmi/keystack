@@ -24,6 +24,11 @@ const CredentialUser = sequelize.define('CredentialUser', {
 			model: 'cp_users',
 			key: 'id'
 		}
+	},
+	created_at: {
+		type: DataTypes.DATE,
+		allowNull: false,
+		defaultValue: DataTypes.NOW
 	}
 }, {
 	tableName: 'cp_credential_users',

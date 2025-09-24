@@ -8,7 +8,7 @@ import {AuthProvider} from './contexts/AuthContext';
 import Credentials from './pages/Credentials';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
-import Profile from './pages/Profile';
+import ProfilePage from './pages/ProfilePage';
 import Projects from './pages/Projects';
 import Teams from './pages/Teams';
 import Users from './pages/Users';
@@ -44,7 +44,7 @@ function App() {
 								<Route path="projects" element={<Projects/>}/>
 								<Route path="users" element={<Users/>}/>
 								<Route path="teams" element={<Teams/>}/>
-								<Route path="profile" element={<Profile/>}/>
+								<Route path="profile" element={<ProfilePage/>}/>
 							</Route>
 						</Routes>
 						<Toaster position="top-right"/>

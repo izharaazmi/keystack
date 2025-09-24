@@ -33,19 +33,19 @@ Project.hasMany(Credential, {foreignKey: 'project_id', as: 'credentials'});
 Credential.belongsTo(Project, {foreignKey: 'project_id', as: 'project'});
 
 // Project-User associations
-Project.belongsToMany(User, {through: ProjectUser, foreignKey: 'project_id', otherKey: 'user_id', as: 'Users'});
-User.belongsToMany(Project, {through: ProjectUser, foreignKey: 'user_id', otherKey: 'project_id', as: 'Projects'});
+Project.belongsToMany(User, {through: ProjectUser, foreignKey: 'projectId', otherKey: 'userId', as: 'Users'});
+User.belongsToMany(Project, {through: ProjectUser, foreignKey: 'userId', otherKey: 'projectId', as: 'Projects'});
 
 // Project-Group associations
-Project.belongsToMany(Group, {through: ProjectGroup, foreignKey: 'project_id', otherKey: 'group_id', as: 'Groups'});
-Group.belongsToMany(Project, {through: ProjectGroup, foreignKey: 'group_id', otherKey: 'project_id', as: 'Projects'});
+Project.belongsToMany(Group, {through: ProjectGroup, foreignKey: 'projectId', otherKey: 'groupId', as: 'Groups'});
+Group.belongsToMany(Project, {through: ProjectGroup, foreignKey: 'groupId', otherKey: 'projectId', as: 'Projects'});
 
 // Add associations for junction tables
-ProjectUser.belongsTo(User, {foreignKey: 'user_id', as: 'User'});
-ProjectUser.belongsTo(Project, {foreignKey: 'project_id', as: 'Project'});
+ProjectUser.belongsTo(User, {foreignKey: 'userId', as: 'User'});
+ProjectUser.belongsTo(Project, {foreignKey: 'projectId', as: 'Project'});
 
-ProjectGroup.belongsTo(Group, {foreignKey: 'group_id', as: 'Group'});
-ProjectGroup.belongsTo(Project, {foreignKey: 'project_id', as: 'Project'});
+ProjectGroup.belongsTo(Group, {foreignKey: 'groupId', as: 'Group'});
+ProjectGroup.belongsTo(Project, {foreignKey: 'projectId', as: 'Project'});
 
 CredentialUser.belongsTo(User, {foreignKey: 'userId', as: 'User'});
 CredentialUser.belongsTo(Credential, {foreignKey: 'credentialId', as: 'Credential'});

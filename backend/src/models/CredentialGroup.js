@@ -24,6 +24,11 @@ const CredentialGroup = sequelize.define('CredentialGroup', {
 			model: 'cp_groups',
 			key: 'id'
 		}
+	},
+	created_at: {
+		type: DataTypes.DATE,
+		allowNull: false,
+		defaultValue: DataTypes.NOW
 	}
 }, {
 	tableName: 'cp_credential_groups',

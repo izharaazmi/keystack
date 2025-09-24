@@ -24,6 +24,11 @@ const UserGroup = sequelize.define('UserGroup', {
 			model: 'cp_groups',
 			key: 'id'
 		}
+	},
+	created_at: {
+		type: DataTypes.DATE,
+		allowNull: false,
+		defaultValue: DataTypes.NOW
 	}
 }, {
 	tableName: 'cp_user_groups',

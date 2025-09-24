@@ -1,4 +1,4 @@
-import {ChevronDown, ChevronUp, Edit3, Lock, Plus, Search, Shield, User, Users as UsersIcon, X} from 'lucide-react';
+import {ChevronDown, ChevronUp, Edit3, Lock, Plus, Search, Shield, User, Users as UsersIcon, X, FolderOpen} from 'lucide-react';
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import toast from 'react-hot-toast';
 import {useMutation, useQuery, useQueryClient} from 'react-query';
@@ -236,20 +236,36 @@ const Users = () => {
 								<td className="font-medium">
 									<div className="flex items-center">
 										<span>{user.first_name} {user.last_name}</span>
-										{user.id !== currentUser?.id && (
+										<div className="flex items-center ml-2 space-x-1">
 											<button
-												onClick={() => handleEditUser(user)}
-												className="ml-2 p-1 text-gray-400 hover:text-blue-600 transition-colors relative group"
+												onClick={() => handleViewAssignments(user)}
+												className="p-1 text-gray-400 hover:text-green-600 transition-colors relative group"
+												title="View assignments"
 											>
-												<Edit3 className="h-4 w-4"/>
+												<FolderOpen className="h-4 w-4"/>
 												<div
 													className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-													Edit user
+													View assignments
 													<div
 														className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
 												</div>
 											</button>
-										)}
+											{user.id !== currentUser?.id && (
+												<button
+													onClick={() => handleEditUser(user)}
+													className="p-1 text-gray-400 hover:text-blue-600 transition-colors relative group"
+													title="Edit user"
+												>
+													<Edit3 className="h-4 w-4"/>
+													<div
+														className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+														Edit user
+														<div
+															className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+													</div>
+												</button>
+											)}
+										</div>
 									</div>
 								</td>
 								<td>{user.email}</td>
@@ -643,6 +659,10 @@ const Users = () => {
 		setEditingUser(user);
 		setShowEditModal(true);
 	}, []);
+
+	const handleViewAssignments = useCallback((user) => {
+		navigate(`/profile?userId=${user.id}&tab=assignments`);
+	}, [navigate]);
 
 	const handleUpdateUser = useCallback((formData) => {
 		if (!editingUser) return;
